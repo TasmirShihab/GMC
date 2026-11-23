@@ -1,0 +1,122 @@
+/* ------------------------------------------------------------------
+   Tokens. PROVISIONAL until the art direction locks; colours mirror
+   src/webgl/palette.ts so DOM and WebGL always match.
+   ------------------------------------------------------------------ */
+:root {
+  --c-cloth: #f1ece3;
+  --c-ink: #14120f;
+  --c-terracotta: #d2643a;
+  --c-crimson: #a8322f;
+  --c-indigo: #2c3a66;
+  --c-gold: #e3a857;
+  --c-stone: #a89f95;
+
+  /* From the reference recording (home intro + hero). */
+  --c-paper: #ece4ce;
+  --c-paper-light: #f5eed4;
+  --c-brown: #4b4034;
+  --c-brown-soft: #5c5344;
+  --c-route: #8c826c;
+  --c-hero-text: #f6edd3;
+  --c-yellow: #fbdf4a;
+  /* Section colour after the welcome dissolve: a deep terracotta from the GMC logo, dark enough for cream body text (about 4.6:1). */
+  --c-terra: #b04e2a;
+
+  --font-sans: var(--font-display), system-ui, sans-serif;
+  --font-title: var(--font-title-face), var(--font-display), sans-serif;
+  --font-big: var(--font-big-face), var(--font-display), sans-serif;
+  --font-script: var(--font-script-face), cursive;
+  --font-code: var(--font-mono), ui-monospace, monospace;
+  --font-dzongkha: var(--font-dz), serif;
+
+  --gutter: clamp(16px, 4vw, 56px);
+  --ease-breath: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --step-0: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --step-1: clamp(1.25rem, 1.1rem + 0.6vw, 1.6rem);
+  --step-3: clamp(2rem, 1.4rem + 2.6vw, 3.8rem);
+  --step-5: clamp(3rem, 1.6rem + 6.5vw, 8.5rem);
+
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--c-paper);
+  color: var(--c-brown);
+  font: 400 var(--step-0) / 1.6 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-gold);
+  outline-offset: 3px;
+}
+
+/* The single WebGL canvas sits behind the DOM. Sections stay transparent where 3D should show. */
+.webgl-canvas {
+  position: fixed !important;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* :where() keeps this at zero specificity so components can still fix their own header. */
+:where(.app-root) > main,
+:where(.app-root) > header,
+:where(.app-root) > footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* Text revealed by <RevealText>: hidden until split, only when JS runs. */
+html.js .reveal {
+  visibility: hidden;
+}
+
+.mono {
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stats-gl {
+  position: fixed !important;
+  left: auto !important;
+  right: 8px;
+  top: 8px !important;
+  z-index: 100 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

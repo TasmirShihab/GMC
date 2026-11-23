@@ -1,0 +1,91 @@
+/* From the "Read the story" reference: yellow pill, heavy dark caps, a thin ring a few px outside it. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75em;
+  height: clamp(48px, 3.6vw, 66px);
+  padding: 0 clamp(26px, 2.3vw, 44px);
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  outline: 1px solid;
+  outline-offset: 5px;
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: clamp(13px, 0.95vw, 18px);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    outline-offset 0.35s var(--ease-settle),
+    background-color 0.3s,
+    color 0.3s;
+}
+
+.btn:hover,
+.btn:focus-visible {
+  outline-offset: 8px;
+}
+
+.primary {
+  background: var(--c-yellow);
+  color: var(--c-brown);
+  outline-color: rgb(251 223 74 / 0.65);
+}
+
+/* Just the icon and the words: no background, border or ring. A soft shadow keeps it readable on video. */
+.secondary {
+  background: none;
+  color: var(--c-hero-text);
+  outline: 0;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.55);
+}
+
+.secondary .icon {
+  filter: drop-shadow(0 1px 6px rgb(0 0 0 / 0.5));
+  transition: translate 0.35s var(--ease-settle);
+}
+
+.secondary:hover .icon,
+.secondary:focus-visible .icon {
+  translate: 3px 0;
+}
+
+.secondary:focus-visible {
+  outline: 1px solid rgb(246 237 211 / 0.6);
+  outline-offset: 5px;
+}
+
+/* Play mark: the triangle inside a thin circle, both in the text colour. */
+.icon {
+  display: grid;
+  place-items: center;
+  width: 2.2em;
+  height: 2.2em;
+  margin-left: -0.2em;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.icon svg {
+  width: 0.9em;
+  height: 0.9em;
+  margin-left: 0.12em;
+}
+
+/* Trailing arrow: nudges right on hover. */
+.arrow {
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: -0.2em;
+  transition: translate 0.35s var(--ease-settle);
+}
+
+.btn:hover .arrow,
+.btn:focus-visible .arrow {
+  translate: 3px 0;
+}

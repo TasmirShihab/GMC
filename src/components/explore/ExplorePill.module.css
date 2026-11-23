@@ -1,0 +1,58 @@
+.pill {
+  position: fixed;
+  right: clamp(14px, 2.2vw, 44px);
+  bottom: clamp(14px, 4.3vh, 40px);
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: clamp(130px, 12.5vw, 260px);
+  aspect-ratio: 160 / 78;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 2px solid rgb(246 237 211 / 0.9);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.25);
+  text-decoration: none;
+  opacity: 0;
+  visibility: hidden;
+  translate: 0 12px;
+  transition:
+    opacity 0.4s,
+    translate 0.4s var(--ease-settle),
+    visibility 0s 0.4s;
+}
+
+/* set by src/lib/headerTheme.ts once the hero has gone */
+:global(html[data-past-hero='1']) .pill {
+  opacity: 1;
+  visibility: visible;
+  translate: 0 0;
+  transition:
+    opacity 0.4s,
+    translate 0.4s var(--ease-settle),
+    visibility 0s;
+}
+
+.pill img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: scale 0.6s var(--ease-settle);
+}
+
+.pill:hover img {
+  scale: 1.08;
+}
+
+.label {
+  position: relative;
+  padding: 0.75em 1.2em;
+  border-radius: 999px;
+  background: var(--c-yellow);
+  color: var(--c-brown);
+  font: 700 clamp(10px, 0.72vw, 15px) / 1 var(--font-sans);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

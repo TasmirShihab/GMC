@@ -1,0 +1,356 @@
+.invest {
+  position: relative;
+  /* Above the Stories section, which waits underneath while the sectors block dissolves. */
+  z-index: 2;
+  font-family: var(--font-sans);
+}
+
+/* ── 1 · Numbers (fourth reference recording: card 67–92% across, 17–88% down) ── */
+
+.stats {
+  position: relative;
+  height: 100vh;
+  height: 100svh;
+  min-height: 560px;
+  overflow: hidden;
+  background: var(--c-brown);
+  color: var(--c-hero-text);
+}
+
+.backs,
+.back {
+  position: absolute;
+  inset: 0;
+}
+
+.back img,
+.photo img,
+.cardImage img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Keeps the header readable on any picture. */
+.shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.35), transparent 22%);
+  pointer-events: none;
+}
+
+.statCard {
+  --r: clamp(16px, 1.5vw, 26px);
+  --pad: clamp(12px, 1.05vw, 18px);
+  position: absolute;
+  left: 67%;
+  top: 17%;
+  width: 25%;
+  /* ends well above the Explore in 3D pill */
+  height: 61%;
+  min-width: 260px;
+  border-radius: var(--r);
+  box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.6);
+}
+
+/* One per step: an inset photo on top, the number and its label in the panel below.
+   Later ones are clipped away below and wipe up over the one before. */
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--pad) var(--pad) 0;
+  border-radius: var(--r);
+  background: var(--c-brown);
+}
+
+/* Rounded to sit concentric inside the card. */
+.photo {
+  flex: 0 0 62%;
+  overflow: hidden;
+  border-radius: calc(var(--r) - var(--pad) * 0.6);
+}
+
+/* Number bottom-left, label (and its source) bottom-right, as in the reference card. */
+.info {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.8em;
+  padding: 0 clamp(6px, 0.55vw, 10px) clamp(18px, 1.6vw, 28px);
+}
+
+.value {
+  margin: 0;
+  font-family: var(--font-big);
+  font-weight: 400;
+  font-size: clamp(44px, min(5.2vw, 10vh), 104px);
+  line-height: 0.8;
+  white-space: nowrap;
+}
+
+.unit {
+  margin-left: 0.12em;
+  font-size: 0.3em;
+  color: var(--c-yellow);
+}
+
+.meta {
+  max-width: 50%;
+  text-align: right;
+}
+
+.label {
+  margin: 0;
+  font-weight: 700;
+  font-size: clamp(8px, 0.58vw, 11px);
+  letter-spacing: 0.06em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.source {
+  margin: 0.5em 0 0;
+  font-size: clamp(7px, 0.48vw, 9px);
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+/* ── 2 · Sectors (fifth reference recording) ───────────── */
+
+.sectors {
+  position: relative;
+  overflow: hidden;
+  /* One screen: heading on top, card row under it; the two pin and scroll as one block. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: clamp(72px, 10vh, 120px) 0 clamp(26px, 4.4vh, 90px);
+  /* Terra, so it can dissolve away into the cream Stories page below (as About does into the Vision). */
+  background: var(--c-terra);
+  color: var(--c-hero-text);
+}
+
+/* The terra ground for the dissolve (the block's own background goes transparent while it runs). */
+.ground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+  color: var(--c-terra);
+  pointer-events: none;
+}
+
+.topo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Centred block: script word, small caps, big title, short body — the house heading (as in the Vision). */
+.head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px;
+  text-align: center;
+}
+
+.lead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  line-height: 1;
+}
+
+.script {
+  font-family: var(--font-script);
+  font-size: clamp(26px, 2.3vw, 48px);
+}
+
+.kicker {
+  margin-top: 0.75em;
+  font-weight: 700;
+  font-size: clamp(11px, 0.85vw, 18px);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: clamp(10px, 1.6vh, 24px) 0 0;
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.022em currentColor;
+  paint-order: stroke fill;
+  font-size: min(7.2vw, 9.5vh);
+  line-height: 0.9;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+}
+
+.body {
+  max-width: 26em;
+  margin: clamp(12px, 2.2vh, 28px) 0 0;
+  font-size: clamp(13px, 1vw, 18px);
+  line-height: 1.5;
+}
+
+/* The card row; pinned in the middle of the screen while it pages. */
+.stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 79vw) 1fr;
+  align-items: center;
+  margin-top: clamp(32px, 6vh, 88px);
+}
+
+.window {
+  overflow: hidden;
+  /* room for the card shadow */
+  padding: 12px 0 28px;
+  margin: -12px 0 -28px;
+}
+
+.track {
+  --per: 4;
+  --gap: clamp(14px, 1.8vw, 30px);
+  display: flex;
+  gap: var(--gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  will-change: transform;
+}
+
+.card {
+  --inset: clamp(8px, 0.7vw, 12px);
+  color: var(--c-brown);
+  flex: 0 0 calc((100% - (var(--per) - 1) * var(--gap)) / var(--per));
+  padding: var(--inset) var(--inset) 0;
+  overflow: hidden;
+  border: 2px solid rgb(255 250 236 / 0.9);
+  border-radius: clamp(14px, 1.3vw, 22px);
+  background: var(--c-paper-light);
+  box-shadow: 0 18px 36px -22px rgb(40 20 10 / 0.55);
+}
+
+.cardImage {
+  /* a little taller than the reference's 1.4; inset in the card with matching rounded corners */
+  aspect-ratio: 1.18;
+  overflow: hidden;
+  border-radius: calc(clamp(14px, 1.3vw, 22px) - var(--inset) * 0.6);
+}
+
+.cardTitle {
+  margin: 0;
+  padding: clamp(18px, 1.6vw, 28px) clamp(10px, 0.9vw, 16px) clamp(22px, 2vw, 34px);
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: clamp(14px, 1.15vw, 22px);
+  line-height: 1.1;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+}
+
+/* Under the row: the investor call to action. */
+.cta {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(36px, 6.5vh, 76px);
+}
+
+/* Prev / Next: a small diamond with an arrow, the word under it. */
+.nav {
+  justify-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7em;
+  padding: 8px;
+  border: 0;
+  background: none;
+  color: var(--c-hero-text);
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: clamp(9px, 0.68vw, 13px);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.diamond {
+  display: grid;
+  place-items: center;
+  width: clamp(26px, 2vw, 36px);
+  aspect-ratio: 1;
+  rotate: 45deg;
+  border-radius: 4px;
+  background: rgb(246 237 211 / 0.16);
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+}
+
+.diamond svg {
+  width: 60%;
+  rotate: -45deg;
+}
+
+.nav:not(:disabled):hover .diamond {
+  background: var(--c-yellow);
+  color: var(--c-brown);
+}
+
+.prev,
+.next {
+  /* explicit classes so JS can find them */
+  position: relative;
+}
+
+@media (max-width: 1000px) {
+  .track {
+    --per: 2;
+  }
+}
+
+@media (max-width: 700px) {
+  .statCard {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    top: 16%;
+    height: 66%;
+  }
+  .stage {
+    grid-template-columns: 1fr minmax(0, 76vw) 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .track {
+    --per: 1;
+  }
+}

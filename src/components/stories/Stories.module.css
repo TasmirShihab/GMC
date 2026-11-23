@@ -1,0 +1,351 @@
+/* Rebuilt from the sixth reference recording (card ≈ the whole screen with a small cream margin). */
+
+.stories {
+  --edge: clamp(10px, 1.4vw, 18px);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  padding: clamp(96px, 14vh, 170px) 0 var(--edge);
+  background: var(--c-paper);
+  color: var(--c-brown);
+  font-family: var(--font-sans);
+}
+
+/* Pulled up behind the pinned Investor block: its height + the one screen its dissolve takes. */
+@media (prefers-reduced-motion: no-preference) {
+  .stories {
+    margin-top: calc(-100vh - 100svh);
+  }
+}
+
+.topo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ── Heading (the house heading block) ─────────────────── */
+
+.head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px;
+  text-align: center;
+}
+
+.lead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  line-height: 1;
+}
+
+.script {
+  font-family: var(--font-script);
+  font-size: clamp(26px, 2.3vw, 48px);
+}
+
+.kicker {
+  margin-top: 0.75em;
+  font-weight: 700;
+  font-size: clamp(11px, 0.85vw, 18px);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: clamp(10px, 1.6vh, 24px) 0 0;
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.022em currentColor;
+  paint-order: stroke fill;
+  font-size: min(9vw, 13vh);
+  line-height: 0.9;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+}
+
+.body {
+  max-width: 30em;
+  margin: clamp(18px, 3vh, 36px) 0 0;
+  font-size: clamp(13px, 1vw, 18px);
+  line-height: 1.5;
+}
+
+/* ── The story card ────────────────────────────────────── */
+
+.card {
+  position: relative;
+  height: calc(100vh - var(--edge) * 2);
+  height: calc(100svh - var(--edge) * 2);
+  min-height: 520px;
+  margin: clamp(80px, 16vh, 200px) var(--edge) 0;
+  overflow: hidden;
+  border-radius: clamp(18px, 2vw, 32px);
+  background: var(--c-brown);
+  color: var(--c-hero-text);
+  isolation: isolate;
+}
+
+.photo {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.photo[data-on='true'] {
+  opacity: 1;
+}
+
+.photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Darkens the middle and the bottom so the title, buttons and pathway read on any picture. */
+.shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 48% at 50% 48%, rgb(20 14 8 / 0.38), transparent 75%),
+    linear-gradient(to bottom, rgb(20 14 8 / 0.42), transparent 24%, transparent 66%, rgb(20 14 8 / 0.5));
+}
+
+/* Progress dashes, top centre. */
+.dashes {
+  position: absolute;
+  /* below the fixed site header, which sits over the top of the card */
+  top: clamp(72px, 11.5%, 112px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  display: flex;
+  gap: 7px;
+}
+
+.dash {
+  position: relative;
+  width: clamp(26px, 3vw, 46px);
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.dash::before,
+.dash i {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  height: 2px;
+  border-radius: 2px;
+}
+
+.dash::before {
+  background: rgb(246 237 211 / 0.35);
+}
+
+.dash i {
+  background: var(--c-hero-text);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* Centre: the GMC mark, the sector, Read the story. */
+.text {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  translate: -50% -50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(78%, 980px);
+  text-align: center;
+}
+
+.mark {
+  width: auto;
+  height: clamp(42px, 4.4vw, 74px);
+  filter: drop-shadow(0 2px 12px rgb(0 0 0 / 0.4));
+}
+
+.storyTitle {
+  margin: clamp(14px, 2.2vh, 26px) 0 clamp(20px, 3.4vh, 40px);
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.022em currentColor;
+  paint-order: stroke fill;
+  font-size: clamp(40px, min(6.6vw, 12vh), 128px);
+  line-height: 0.92;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  text-shadow: 0 4px 30px rgb(0 0 0 / 0.35);
+}
+
+/* Prev / Next story at the sides. */
+.nav {
+  position: absolute;
+  top: 46%;
+  translate: 0 -50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 8px;
+  border: 0;
+  background: none;
+  color: var(--c-hero-text);
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: clamp(10px, 0.72vw, 14px);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.45);
+  cursor: pointer;
+}
+
+.prev {
+  left: clamp(10px, 1.8vw, 32px);
+}
+
+.next {
+  right: clamp(10px, 1.8vw, 32px);
+}
+
+.diamond {
+  display: grid;
+  place-items: center;
+  width: clamp(26px, 2.1vw, 38px);
+  aspect-ratio: 1;
+  rotate: 45deg;
+  border-radius: 4px;
+  background: rgb(246 237 211 / 0.22);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+}
+
+.diamond svg {
+  width: 58%;
+  rotate: -45deg;
+}
+
+.nav:hover .diamond,
+.nav:focus-visible .diamond {
+  background: var(--c-yellow);
+  color: var(--c-brown);
+}
+
+/* ── The pathway ───────────────────────────────────────── */
+
+.path {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  height: clamp(110px, 17%, 160px);
+  pointer-events: none;
+}
+
+.strip {
+  --sp: 220px;
+  position: absolute;
+  left: 0;
+  top: 10%;
+  height: clamp(64px, 9vh, 90px);
+  width: calc(var(--sp) * 24);
+}
+
+.line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.line path {
+  stroke: var(--c-yellow);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.35));
+}
+
+/* A stop: a round thumbnail on the line; the current one is large, with a yellow ring. */
+.stop {
+  position: absolute;
+  width: clamp(30px, 2.6vw, 42px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid rgb(246 237 211 / 0.9);
+  border-radius: 50%;
+  background: var(--c-brown);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    scale 0.6s var(--ease-settle),
+    border-color 0.4s;
+}
+
+.stop img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stop:hover {
+  scale: 1.12;
+}
+
+.stop[data-on='true'] {
+  scale: 1.7;
+  border: 2px solid var(--c-yellow);
+  box-shadow:
+    0 0 0 2px rgb(30 20 10 / 0.35),
+    0 8px 22px rgb(0 0 0 / 0.45);
+}
+
+@media (max-width: 700px) {
+  .nav {
+    top: auto;
+    bottom: clamp(120px, 20%, 170px);
+    translate: none;
+  }
+  .text {
+    width: 90%;
+  }
+}

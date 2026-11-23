@@ -1,0 +1,372 @@
+/* Positions are % of the viewport, measured from the second reference recording at 1280×644. */
+
+.about {
+  position: relative;
+  /* Above the Vision section, which waits underneath while this one dissolves. */
+  z-index: 2;
+  height: 100vh;
+  height: 100svh;
+  min-height: 560px;
+  overflow: hidden;
+  background: var(--c-terra);
+  color: var(--c-hero-text);
+  font-family: var(--font-sans);
+}
+
+/* Terra ground for the dissolve (the section's own background goes transparent while it runs). */
+.ground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+  color: var(--c-terra);
+  pointer-events: none;
+}
+
+/* ── Left rail: stops + distance ───────────────────────── */
+
+.rail {
+  position: absolute;
+  left: clamp(16px, 1.7vw, 40px);
+  top: 50%;
+  translate: 0 -50%;
+  max-width: 16%;
+}
+
+.stops {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* the thin line joining the markers */
+.stops::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0.6em;
+  bottom: 0.6em;
+  width: 1px;
+  background: rgb(246 237 211 / 0.35);
+}
+
+.stop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 0.95vw, 20px);
+  min-height: clamp(30px, 6.2vh, 60px);
+  line-height: 1.15;
+  font-weight: 700;
+  font-size: clamp(10px, 0.85vw, 18px);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.38;
+  transition: opacity 0.35s;
+}
+
+/* sectors already passed stay a little brighter than those ahead */
+.reached {
+  opacity: 0.55;
+}
+
+/* Focus on the active sector: full brightness, bigger name, and a yellow marker with a soft halo.
+   The name scales from its left edge so the dot on the line stays put and the list doesn't reflow. */
+.current {
+  opacity: 1;
+}
+
+.stopName {
+  transform-origin: 0 50%;
+  transition:
+    scale 0.45s var(--ease-settle),
+    color 0.35s;
+}
+
+.current .stopName {
+  scale: 1.32;
+  color: var(--c-hero-text);
+  text-shadow: 0 2px 14px rgb(0 0 0 / 0.25);
+}
+
+.marker::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1.5px solid var(--c-yellow);
+  opacity: 0;
+  scale: 0.4;
+  transition:
+    opacity 0.35s,
+    scale 0.45s var(--ease-settle);
+}
+
+.current .marker::after {
+  opacity: 1;
+  scale: 1;
+}
+
+.current .marker::before {
+  background: var(--c-yellow);
+}
+
+.marker {
+  position: relative;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  display: grid;
+  place-items: center;
+}
+
+.marker::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* first and last stops get a small chequered flag, like the reference */
+.flag .marker::before {
+  width: 9px;
+  height: 9px;
+  border-radius: 1px;
+  background: conic-gradient(currentColor 25%, transparent 0 50%, currentColor 0 75%, transparent 0) 0 0 / 4.5px 4.5px;
+}
+
+.current.flag .marker::before {
+  background: conic-gradient(var(--c-yellow) 25%, transparent 0 50%, var(--c-yellow) 0 75%, transparent 0) 0 0 / 4.5px
+    4.5px;
+}
+
+.distance {
+  margin: clamp(10px, 2.5vh, 24px) 0 0;
+  display: flex;
+  flex-direction: column;
+  font-weight: 800;
+  font-size: clamp(18px, 1.6vw, 36px);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.areaLabel {
+  font-weight: 700;
+  font-size: 0.5em;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.source {
+  margin: 0.5em 0 0;
+  font-size: clamp(10px, 0.68vw, 13px);
+  letter-spacing: 0.02em;
+  opacity: 0.7;
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Centre: topo + route ───────────────────────────────── */
+
+.topo {
+  position: absolute;
+  left: 17%;
+  top: 14%;
+  width: 46%;
+  height: 72%;
+  opacity: 0.6;
+}
+
+.map {
+  position: absolute;
+  left: 18.5%;
+  top: 50%;
+  width: 36%;
+  translate: 0 -50%;
+}
+
+.map svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.base,
+.progress {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.base {
+  stroke: rgb(246 237 211 / 0.45);
+  stroke-width: 5;
+}
+
+.progress {
+  stroke: var(--c-yellow);
+  stroke-width: 9;
+  /* undrawn until the script measures it */
+  stroke-dasharray: 9999;
+  stroke-dashoffset: 9999;
+}
+
+.ring {
+  fill: var(--c-terra);
+  stroke: var(--c-yellow);
+  stroke-width: 8;
+}
+
+.dot {
+  fill: var(--c-terra);
+  stroke: rgb(246 237 211 / 0.7);
+  stroke-width: 5;
+  transition:
+    fill 0.3s,
+    stroke 0.3s;
+}
+
+.dot.reached {
+  fill: var(--c-yellow);
+  stroke: var(--c-yellow);
+}
+
+/* the start ring keeps its own look */
+.ring.dot,
+.ring.dot.reached {
+  fill: var(--c-terra);
+  stroke: var(--c-yellow);
+  stroke-width: 8;
+}
+
+/* Tag floating above the current stop. Outer box is placed and faded by the script; inner one bobs. */
+.tag {
+  position: absolute;
+  z-index: 2;
+  translate: -50% calc(-100% - 14px);
+  pointer-events: none;
+}
+
+.tagBody {
+  position: relative;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.55em 0.95em 0.65em;
+  border-radius: 6px;
+  background: var(--c-hero-text);
+  color: var(--c-brown);
+  box-shadow: 0 10px 26px rgb(0 0 0 / 0.22);
+  white-space: nowrap;
+  animation: float 3.2s ease-in-out infinite;
+}
+
+/* little pointer down to the stop */
+.tagBody::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  translate: -50% 0;
+  rotate: 45deg;
+  background: inherit;
+  border-radius: 2px;
+}
+
+.tagScript {
+  font-family: var(--font-script);
+  font-size: clamp(15px, 1.15vw, 24px);
+  line-height: 1;
+}
+
+.tagNum {
+  font-variant-numeric: tabular-nums;
+}
+
+.tagName {
+  font-weight: 800;
+  font-size: clamp(11px, 0.9vw, 19px);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ── Right: about copy ──────────────────────────────────── */
+
+.text {
+  position: absolute;
+  left: 58%;
+  top: 23%;
+  width: min(28%, 520px);
+}
+
+.kicker {
+  margin: 0 0 0.15em;
+  font-family: var(--font-script);
+  font-size: clamp(22px, 2.1vw, 46px);
+  line-height: 1;
+}
+
+.heading {
+  margin: 0 0 1em;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.02em currentColor;
+  paint-order: stroke fill;
+  font-size: clamp(26px, 2.85vw, 64px);
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
+.body {
+  margin: 0 0 1.1em;
+  font-size: clamp(14px, 0.92vw, 19px);
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .about {
+    height: auto;
+    padding: 96px 20px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .rail,
+  .topo,
+  .map,
+  .text {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: auto;
+  }
+  .topo {
+    display: none;
+  }
+  .map {
+    width: 100%;
+    margin: 24px 0;
+  }
+}

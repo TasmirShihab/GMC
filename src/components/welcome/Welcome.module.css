@@ -1,0 +1,126 @@
+/* Positions are % of the viewport, measured from the second reference recording at 1280×644. */
+
+.welcome {
+  --paper: #ece4ce;
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  height: 100svh;
+  min-height: 560px;
+  overflow: hidden;
+  background: var(--c-terra);
+  color: var(--c-brown);
+  font-family: var(--font-sans);
+}
+
+/* Cream paper + faint topo; the dissolve cuts islands out of it to reveal the colour beneath. */
+.paper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Copy ───────────────────────────────────────────────── */
+
+.copy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.lead {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 19.6%;
+  translate: 0 -50%;
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: clamp(12px, 1.2vw, 26px);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-size: 1.6em;
+  text-transform: none;
+  letter-spacing: 0;
+  margin: 0 0.12em;
+  vertical-align: -0.12em;
+}
+
+.title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 26.4%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.022em currentColor;
+  paint-order: stroke fill;
+  font-size: min(10.2vw, 14.4vh);
+  line-height: 0.9;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* ── Photo cards ─────────────────────────────────────────── */
+
+.cards {
+  /* no stacking context, so front cards can sit above the title and back cards below it */
+  position: absolute;
+  inset: 0;
+}
+
+.card {
+  position: absolute;
+  z-index: 1;
+}
+
+.cardInner {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: 0 14px 40px rgb(0 0 0 / 0.28);
+}
+
+.cardInner img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.c1 { left: 2%; top: 8.5%; width: 15%; aspect-ratio: 16 / 9; }
+.c2 { left: 17.8%; top: 22.8%; width: 17%; aspect-ratio: 3 / 2; z-index: 3; }
+.c3 { left: 78%; top: 8.5%; width: 15%; aspect-ratio: 9 / 8; }
+.c4 { left: 5%; top: 62.7%; width: 15%; aspect-ratio: 1; }
+.c5 { left: 62%; top: 60.2%; width: 15.2%; aspect-ratio: 3 / 2; z-index: 3; }
+.c6 { left: 83.2%; top: 75.5%; width: 15%; aspect-ratio: 6 / 5; }
+
+@media (max-width: 700px) {
+  .title {
+    font-size: 11vw;
+  }
+  .c2,
+  .c5 {
+    width: 34%;
+  }
+  .c1,
+  .c3,
+  .c4,
+  .c6 {
+    width: 28%;
+  }
+}
