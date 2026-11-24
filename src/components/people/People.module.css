@@ -1,0 +1,166 @@
+/* Chapter 06 · The People, on the cream paper (after the cream Stories page).
+   Layout from the team-page reference: heading top-left; each group a row with its name on the left
+   and three tall portraits on the right, name and role under each. */
+
+.people {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  padding: clamp(96px, 14vh, 170px) clamp(16px, 6vw, 120px) clamp(80px, 12vh, 150px);
+  background: var(--c-paper);
+  color: var(--c-brown);
+  font-family: var(--font-sans);
+}
+
+.topo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.inner {
+  --label: minmax(0, 1fr);
+  --cards: minmax(0, 2.6fr);
+  --gap: clamp(14px, 1.7vw, 32px);
+  position: relative;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* ── Heading, left-aligned (the About heading style) ───── */
+
+.head {
+  max-width: 44em;
+}
+
+.script {
+  margin: 0 0 0.15em;
+  font-family: var(--font-script);
+  font-size: clamp(24px, 2.2vw, 46px);
+  line-height: 1;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.022em currentColor;
+  paint-order: stroke fill;
+  font-size: clamp(44px, min(6.4vw, 11vh), 120px);
+  line-height: 0.92;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+}
+
+.chair {
+  margin: clamp(18px, 2.8vh, 32px) 0 0;
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-terra);
+}
+
+.body {
+  max-width: 34em;
+  margin: 0.7em 0 0;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/* ── Groups: name on the left, portraits on the right ─── */
+
+.group {
+  display: grid;
+  grid-template-columns: var(--label) var(--cards);
+  column-gap: var(--gap);
+  margin-top: clamp(48px, 8vh, 96px);
+}
+
+.group + .group {
+  padding-top: clamp(40px, 6vh, 72px);
+  border-top: 1px solid rgb(75 64 52 / 0.14);
+}
+
+.groupTitle {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-family: var(--font-big);
+  font-weight: 400;
+  font-size: clamp(24px, 2.3vw, 44px);
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(36px, 5vh, 56px) var(--gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.person {
+  min-width: 0;
+}
+
+/* Tall rounded portrait (the reference's 6:7). */
+.portrait {
+  --r: clamp(14px, 1.3vw, 22px);
+  position: relative;
+  aspect-ratio: 6 / 7;
+  overflow: hidden;
+  border-radius: var(--r);
+  /* A warm studio ground: the photos' white backdrops multiply into it, so they all sit on one colour. */
+  background: #e4d9bd;
+}
+
+.portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 15%;
+  mix-blend-mode: multiply;
+  transition: scale 0.8s var(--ease-settle);
+}
+
+.person:hover .portrait img {
+  scale: 1.03;
+}
+
+.name {
+  margin: 0.75em 0 0;
+  font-family: var(--font-big);
+  font-size: clamp(20px, 1.7vw, 32px);
+  line-height: 1.05;
+}
+
+.role {
+  margin: 0.5em 0 0;
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: var(--fs-label);
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-terra);
+}
+
+@media (max-width: 1000px) {
+  .group {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: clamp(20px, 3vh, 32px);
+  }
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

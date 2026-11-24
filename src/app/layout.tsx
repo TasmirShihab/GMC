@@ -21,7 +21,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={fontVariables} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={fontVariables}
+      // dev only: lets the sound toggle make room for the Next.js badge beside it
+      data-dev-badge={process.env.NODE_ENV === 'development' ? '' : undefined}
+      suppressHydrationWarning
+    >
       <head>
         {/* Marks JS as available before paint, so .reveal text is hidden only when it will animate. */}
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />

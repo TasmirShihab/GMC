@@ -49,7 +49,12 @@
   pointer-events: none;
   background:
     linear-gradient(180deg, rgb(18 14 10 / 0.62) 0%, rgb(18 14 10 / 0.28) 12%, rgb(18 14 10 / 0) 26%),
-    radial-gradient(55% 34% at 50% 48%, rgb(18 14 10 / 0.42) 0%, rgb(18 14 10 / 0.18) 55%, rgb(18 14 10 / 0) 100%),
+    radial-gradient(
+      55% 34% at 50% 48%,
+      rgb(18 14 10 / 0.42) 0%,
+      rgb(18 14 10 / 0.18) 55%,
+      rgb(18 14 10 / 0) 100%
+    ),
     linear-gradient(0deg, rgb(18 14 10 / 0.6) 0%, rgb(18 14 10 / 0.22) 12%, rgb(18 14 10 / 0) 26%);
 }
 
@@ -169,7 +174,7 @@
 
 .cueLabel {
   font-weight: 700;
-  font-size: clamp(10px, 0.66vw, 14px);
+  font-size: var(--fs-nav);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -186,36 +191,112 @@
 
 /* ── Sound toggle ─────────────────────────────────────── */
 
+/* Sound toggle: fixed bottom-left while the hero is on screen (52px, a comfortable pointer and touch target). */
 .sound {
-  position: absolute;
-  right: clamp(16px, 1.6vw, 36px);
-  bottom: 3.1%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 14px 9px 11px;
-  border: 1px solid rgb(246 237 211 / 0.35);
-  border-radius: 999px;
-  background: rgb(18 14 10 / 0.35);
+  position: fixed;
+  left: clamp(16px, 1.6vw, 36px);
+  bottom: clamp(16px, 3vh, 32px);
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid rgb(246 237 211 / 0.4);
+  border-radius: 50%;
+  background: rgb(18 14 10 / 0.4);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   color: var(--c-hero-text);
-  font: 700 clamp(10px, 0.66vw, 14px) / 1 var(--font-sans);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   cursor: pointer;
   transition:
-    background-color 0.2s,
-    border-color 0.2s;
+    background-color 0.25s,
+    border-color 0.25s,
+    color 0.25s;
+}
+
+/* Dev only: the Next.js badge (36px, 20px from the corner) takes the corner; the toggle sits beside it,
+   centred on the same line. */
+:global(html[data-dev-badge]) .sound {
+  left: 70px;
+  bottom: 12px;
 }
 
 .sound:hover {
-  background: rgb(18 14 10 / 0.55);
-  border-color: rgb(246 237 211 / 0.6);
+  background: rgb(18 14 10 / 0.6);
+  border-color: rgb(246 237 211 / 0.7);
 }
 
-.sound svg {
-  width: 18px;
+.sound:focus-visible {
+  outline: 2px solid var(--c-yellow);
+  outline-offset: 3px;
+}
+
+/* Five bars: a moving level meter with sound on, flat dashes with it off. */
+.bars {
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
   height: 18px;
+}
+
+.bars i {
+  width: 2.5px;
+  height: 18px;
+  border-radius: 2px;
+  background: currentColor;
+  transform-origin: center;
+  animation: level 1s ease-in-out infinite alternate;
+  transition: transform 0.35s var(--ease-settle);
+}
+
+.bars i:nth-child(1) {
+  animation-duration: 0.9s;
+}
+.bars i:nth-child(2) {
+  animation-duration: 0.6s;
+  animation-delay: -0.2s;
+}
+.bars i:nth-child(3) {
+  animation-duration: 0.8s;
+  animation-delay: -0.5s;
+}
+.bars i:nth-child(4) {
+  animation-duration: 0.55s;
+  animation-delay: -0.1s;
+}
+.bars i:nth-child(5) {
+  animation-duration: 0.75s;
+  animation-delay: -0.35s;
+}
+
+@keyframes level {
+  from {
+    transform: scaleY(0.25);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Off: the bars stop and lie flat as a dashed line. */
+.sound[data-muted='true'] .bars {
+  gap: 2px;
+}
+
+.sound[data-muted='true'] .bars i {
+  width: 4px;
+  animation: none;
+  transform: scaleY(0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bars i {
+    animation: none;
+  }
+  .sound[data-muted='false'] .bars i:nth-child(odd) {
+    transform: scaleY(0.55);
+  }
 }
 
 /* Hidden until the loader dissolves (only when JS will animate them in). */

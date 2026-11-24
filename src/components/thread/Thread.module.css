@@ -1,0 +1,254 @@
+/* Chapter 07 · Take part: one still render, the heading on it, six cream cards in two offset rows.
+   Card style from the "5.9 / ceiling height" reference: a flat light card, big word top-left in the accent
+   colour, the small text at the bottom. Positions are % of the section. */
+
+.thread {
+  /* card width and the even gap of the top row */
+  --w: clamp(170px, 16.5vw, 290px);
+  --gap: clamp(14px, 1.4vw, 24px);
+  --x0: 41%;
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  height: 100svh;
+  min-height: 760px;
+  overflow: hidden;
+  background: var(--c-brown);
+  color: var(--c-hero-text);
+  font-family: var(--font-sans);
+}
+
+/* Pulled up behind the pinned Zhabtog section: its height + the one screen its dissolve takes. */
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  .thread {
+    margin-top: calc(-1 * max(100svh, 640px) - 100vh);
+  }
+}
+
+.back {
+  position: absolute;
+  inset: 0;
+}
+
+.back img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Darker top-left behind the heading, and along the top for the header. */
+.shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 56% 66% at 15% 32%, rgb(20 14 8 / 0.66), transparent 74%),
+    linear-gradient(to bottom, rgb(20 14 8 / 0.4), transparent 22%);
+}
+
+/* ── Heading (left-aligned, as About) ──────────────────── */
+
+.head {
+  position: absolute;
+  left: clamp(20px, 5vw, 96px);
+  top: 15%;
+  width: min(34%, 560px);
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.35);
+}
+
+.script {
+  margin: 0 0 0.15em;
+  font-family: var(--font-script);
+  font-size: clamp(24px, 2.2vw, 46px);
+  line-height: 1;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.022em currentColor;
+  paint-order: stroke fill;
+  font-size: clamp(40px, min(5.2vw, 9.5vh), 104px);
+  line-height: 0.92;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+}
+
+/* ── The six cards ─────────────────────────────────────── */
+
+.cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  position: absolute;
+  width: var(--w);
+}
+
+/* Two level rows with the same gap everywhere. Top row (Invest, Live, Work) beside the title; the bottom
+   row (Visit, Participate, Immigration) one step to the left, so Immigration sits right under Live. */
+.c1,
+.c2,
+.c3 {
+  top: 13%;
+}
+.c4,
+.c5,
+.c6 {
+  /* a card is 6/5 as tall as it is wide */
+  top: calc(13% + var(--w) * 1.2 + var(--gap));
+}
+.c1,
+.c5 {
+  left: var(--x0);
+}
+.c2,
+.c6 {
+  left: calc(var(--x0) + var(--w) + var(--gap));
+}
+.c3 {
+  left: calc(var(--x0) + 2 * (var(--w) + var(--gap)));
+}
+.c4 {
+  left: calc(var(--x0) - var(--w) - var(--gap));
+}
+
+.link {
+  --r: clamp(16px, 1.4vw, 24px);
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 5 / 6;
+  padding: clamp(18px, 1.5vw, 28px);
+  border-radius: var(--r);
+  background: var(--c-paper-light);
+  color: var(--c-brown);
+  text-decoration: none;
+  box-shadow: 0 24px 48px -26px rgb(20 12 6 / 0.65);
+  transition:
+    translate 0.5s var(--ease-settle),
+    box-shadow 0.5s var(--ease-settle);
+}
+
+.link:hover,
+.link:focus-visible {
+  translate: 0 -6px;
+  box-shadow: 0 32px 56px -28px rgb(20 12 6 / 0.75);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--c-yellow);
+  outline-offset: 4px;
+}
+
+.cardTitle {
+  font-family: var(--font-big);
+  /* scales with the card so the longest word (Immigration) always fits */
+  font-size: calc(var(--w) * 0.1);
+  line-height: 0.95;
+  text-transform: uppercase;
+  color: var(--c-terra);
+}
+
+/* Immigration's own site, as a small ringed tag under its title. */
+.site {
+  align-self: flex-start;
+  margin-top: 0.8em;
+  padding: 0.45em 0.8em;
+  border: 1px solid rgb(176 78 42 / 0.45);
+  border-radius: 999px;
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: var(--fs-meta);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-terra);
+}
+
+.foot {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.text {
+  flex: 1;
+  font-size: var(--fs-body-sm);
+  line-height: 1.45;
+}
+
+.diamond {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: clamp(26px, 1.9vw, 32px);
+  aspect-ratio: 1;
+  margin: 0 4px 4px 0;
+  rotate: 45deg;
+  border-radius: 5px;
+  background: var(--c-yellow);
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+}
+
+.diamond svg {
+  width: 52%;
+  rotate: -45deg;
+}
+
+.link:hover .diamond,
+.link:focus-visible .diamond {
+  background: var(--c-terra);
+  color: var(--c-paper-light);
+}
+
+/* Narrow screens: the heading, then the cards in a plain grid over the same still picture. */
+@media (max-width: 1000px) {
+  .thread {
+    height: auto;
+    min-height: 0;
+    padding: clamp(96px, 14vh, 140px) 20px 72px;
+  }
+  .head {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: auto;
+    max-width: 34em;
+  }
+  .cards {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 40px;
+  }
+  .card {
+    position: static;
+    width: auto;
+  }
+  .link {
+    aspect-ratio: auto;
+    min-height: 220px;
+  }
+  .cardTitle {
+    font-size: clamp(26px, 5vw, 38px);
+  }
+}
+
+@media (max-width: 560px) {
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .link {
+    min-height: 0;
+    gap: 18px;
+  }
+}

@@ -19,6 +19,8 @@ import { stage } from './tunnel'
 export default function WebGLCanvas({ eventSource }: { eventSource: RefObject<HTMLElement | null> }) {
   const tier = useExperience((s) => s.tier)
   const debug = useExperience((s) => s.debug)
+  // Paused (no frames drawn) while the full-screen 3D map layer covers the page.
+  const mapOpen = useExperience((s) => s.mapOpen)
 
   // Tier 0 or still profiling: render nothing; the DOM story is complete on its own.
   if (tier === null || tier === 0) return null
@@ -27,6 +29,7 @@ export default function WebGLCanvas({ eventSource }: { eventSource: RefObject<HT
   return (
     <Canvas
       className="webgl-canvas"
+      frameloop={mapOpen ? 'never' : 'always'}
       eventSource={eventSource as RefObject<HTMLElement>}
       eventPrefix="client"
       dpr={q.dpr}

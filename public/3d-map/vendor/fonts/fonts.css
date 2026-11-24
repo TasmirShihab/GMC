@@ -1,0 +1,6 @@
+/* The 3D pages ask for Marcellus, Jost, Alegreya Sans, Belleza and JetBrains Mono; they get the site's own faces. */
+@font-face{font-family:'Belleza';src:url('Belleza-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Marcellus';src:url('Belleza-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Jost';src:url('Outfit-latin.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Alegreya Sans';src:url('Outfit-latin.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'JetBrains Mono';src:url('JetBrainsMono-latin.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}

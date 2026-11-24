@@ -1,0 +1,848 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>GMC Healthcare Centre</title>
+<link rel="stylesheet" href="/3d-map/vendor/fonts/fonts.css">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #18130f;           /* umber */
+    --ink: #efece6;          /* sand */
+    --ink-2: rgba(239,236,230,.7);
+    --line: rgba(239,236,230,.14);
+    --panel: rgba(24,19,15,.64);
+    --saffron: #fe6417;
+    --maroon: #6d0033;
+    --honey: #ffc450;
+    --f-display: "Belleza", "Cormorant Garamond", Georgia, serif;
+    --f-body: "Alegreya Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); overflow: hidden; }
+  #stage { position: fixed; inset: 0; touch-action: none; }
+  #stage canvas { display: block; }
+  .mono { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; }
+  .panel { position: fixed; background: var(--panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--line); border-radius: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-2); white-space: nowrap; }
+  .chip b { color: var(--ink); font-weight: 500; }
+  #telemetry { top: calc(16px + env(safe-area-inset-top, 0px)); left: calc(16px + env(safe-area-inset-left, 0px)); padding: 8px; max-width: 360px; }
+  #variants { top: calc(16px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); padding: 5px; display: flex; gap: 6px; }
+  .seg { display: flex; border-radius: 999px; overflow: hidden; }
+  .sep { width: 1px; background: var(--line); margin: 4px 0; }
+  button { font: 500 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); background: transparent; border: 0; padding: 8px 14px; cursor: pointer; border-radius: 999px; }
+  button:hover { color: var(--ink); background: rgba(239,236,230,.07); }
+  button:focus-visible { outline: 2px solid var(--honey); outline-offset: 2px; }
+  button[aria-pressed="true"] { color: var(--bg); background: var(--ink); }
+  #hints { top: calc(16px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); padding: 12px 16px; line-height: 1.75; color: var(--ink-2); }
+  #hints b { color: var(--ink); font-weight: 500; }
+  #dock { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: calc(16px + env(safe-area-inset-left, 0px)); padding: 16px 18px; width: min(560px, calc(100vw - 32px)); display: grid; gap: 10px; }
+  #status { color: var(--ink-2); display: flex; gap: 14px; flex-wrap: wrap; }
+  #status .dot { color: var(--saffron); }
+  #status.dark .dot { color: var(--ink-2); }
+  #dock h1 { font: 400 clamp(22px, 3.2vw, 34px)/1.05 var(--f-display); margin: 0; letter-spacing: .01em; text-wrap: balance; }
+  #sub { color: var(--ink-2); }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .actions button { border: 1px solid var(--line); }
+  .actions button.primary { background: var(--maroon); color: var(--ink); border-color: transparent; }
+  .meters { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; }
+  .bar { height: 4px; border-radius: 4px; background: rgba(239,236,230,.12); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffaa3c, #fff3dc); border-radius: 4px; }
+  #tip { position: fixed; pointer-events: none; padding: 8px 10px; border-radius: 10px; background: rgba(24,19,15,.82); border: 1px solid var(--line); line-height: 1.6; transform: translate(14px, -50%); opacity: 0; transition: opacity .18s; }
+  #tip b { font-family: var(--f-display); font-size: 15px; font-weight: 400; letter-spacing: .02em; }
+  #loader { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 55%, #241d18, var(--bg) 70%); z-index: 20; transition: opacity .8s cubic-bezier(.16,1,.3,1); }
+  #loader .flame { width: 14px; height: 14px; border-radius: 50%; margin: 0 auto 14px; background: radial-gradient(circle, #fff3dc, #ffc450 45%, rgba(254,120,40,0) 72%); box-shadow: 0 0 22px 6px rgba(255,170,60,.35); animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.25); opacity: .75; } }
+  #err { position: fixed; right: 16px; bottom: 16px; max-width: 60vw; color: #ff8a8d; }
+  @media (max-width: 820px) { #hints { display: none; } #telemetry { max-width: calc(100vw - 32px); } #variants { top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: auto; right: calc(16px + env(safe-area-inset-right, 0px)); transform: none; flex-direction: column; } #dock { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); } }
+  @media (prefers-reduced-motion: reduce) { #loader .flame { animation: none; } }
+</style>
+
+<div id="stage" aria-label="GMC Healthcare Centre, 3D model"></div>
+
+<div id="telemetry" class="panel"><div class="chips mono">
+  <span class="chip">FPS::<b id="t-fps">–</b></span>
+  <span class="chip">MOOD::<b id="t-mood">DUSK</b></span>
+  <span class="chip">WARDS::<b id="t-lit">0/5</b></span>
+  <span class="chip">ZOOM::<b id="t-zoom">1.00</b></span>
+  <span class="chip">QUALITY::<b id="t-q">HIGH</b></span>
+</div></div>
+
+<div id="variants" class="panel">
+  <div class="seg" role="group" aria-label="Look">
+    <button data-look="dusk" aria-pressed="true">Dusk</button>
+    <button data-look="golden" aria-pressed="false">Golden</button>
+    <button data-look="day" aria-pressed="false">Day</button>
+    <button data-look="clay" aria-pressed="false">Clay</button>
+  </div>
+  <span class="sep"></span>
+  <div class="seg" role="group" aria-label="View">
+    <button data-view="aerial" aria-pressed="true">Aerial</button>
+    <button data-view="river" aria-pressed="false">River</button>
+  </div>
+</div>
+
+<div id="hints" class="panel mono">
+  <b>Hover</b> a ward · <b>Click</b> switch its lights<br>
+  <b>Wheel / pinch</b> zoom to cursor · <b>+ −</b><br>
+  <b>Drag</b> orbit (springs back) · <b>Shift / right-drag</b> pan<br>
+  <b>L</b> all lights · <b>1 2 3 4</b> dusk / golden / day / clay · <b>V</b> view<br>
+  <b>0</b> or <b>double-click</b> reset · <b>Q</b> quality · <b>M</b> sound
+</div>
+
+<div id="dock" class="panel">
+  <div id="status" class="mono"><span><span class="dot">●</span> CENTRE::<b id="s-state">WARMING</b></span><span>GMC::O4</span><span>KIT::<b id="s-kit">–</b></span></div>
+  <h1>Healthcare Centre</h1>
+  <div id="sub" class="mono">BAMBOO SLAT SCREEN · SADDLE ROOF · 96 × 26 M · EAVE 8.6 → 24 M · 5 WARDS</div>
+  <div class="actions">
+    <button id="a-lights" class="primary">Lights off</button>
+    <button id="a-reset">Reset view</button>
+    <button id="a-sound" aria-pressed="false">Sound off</button>
+    <button id="a-q">Quality: high</button>
+    <button id="a-glb" hidden>Export GLB</button>
+  </div>
+  <div class="meters mono">
+    <span>GLOW</span><span class="bar"><i id="m-glow"></i></span><span id="m-glow-v">0%</span>
+    <span>FOCUS</span><span class="bar"><i id="m-focus"></i></span><span id="m-focus-v">—</span>
+  </div>
+</div>
+
+<div id="tip" class="mono"></div>
+<div id="err" class="mono" hidden></div>
+<div id="loader"><div class="mono" style="text-align:center;color:rgba(239,236,230,.72)"><div class="flame"></div>BUILDING::TEXTURES</div></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "/3d-map/vendor/three/build/three.module.js",
+  "three/addons/": "/3d-map/vendor/three/addons/",
+  "gmc-kit": "../../shared/gmc-kit.js",
+  "gmc-people": "../../shared/gmc-people.js",
+  "gmc-component-mode": "../../shared/gmc-component-mode.js"
+} }
+</script>
+<script type="module">
+// ═══════════════════════════════════════════════════════════════════════════
+// GMC · O4 Healthcare Centre · v02: v01 in the masterplan-map environment (as airport v03): dark-teal block ground with a surround
+// that fades into a teal void, scattered lights, no vegetation, no strata skirt. v01 is kept unchanged.
+// Built on shared/gmc-kit.js (design.md). Units: metres. North = −Z, so the
+// entrance facade faces +Z (south, towards the river). Root: gmc_obj_o4-healthcare-centre.
+// Form after BIG's render (references/big/render-healthcare-centre.png): a long
+// saddle-shaped hall wrapped in vertical bamboo slats, low in the middle and
+// sweeping up at both ends. The roof here is a catenary along the length
+// (eave 8.6 m → 24 m) crossed by a 1.4 m crown, so it is a true saddle.
+// Dimensions, floor count and ward names are our reading, not BIG data.
+// ═══════════════════════════════════════════════════════════════════════════
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { createPeople, seatedGroup } from 'gmc-people';
+import { createDirector, isEmbedded } from 'gmc-component-mode';
+import { prepareTextures, createStage, createSkirt, createNoise, createTrees, createGrass, createRocks, createWaterSurface, addWaterObstacles, enableWaterReflections, createReeds, createBroadLeaves, wetBanks, metricUV, scaleUV, variant, MOODS, KIT_VERSION, sunDirection, countTriangles } from 'gmc-kit';
+
+const $ = id => document.getElementById(id);
+const EMBED = isEmbedded();   // inside the UI shell (?embed=1): no own chrome, golden, the shell drives the camera
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+try {
+  await Promise.race([new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))), new Promise(r => setTimeout(r, 120))]);
+
+  // ─────────────────────────────────────────────────────────── renderer + kit
+  await prepareTextures({ quality: 'high' });                   // kit 1.9.0: textures from cache or parallel workers, not ~10 s on this thread
+  const stage = createStage({ container: $('stage'), mood: 'dusk' });
+  stage.controls.dispose();
+  const M = stage.materials, camera = stage.camera, renderer = stage.renderer;
+  const T0 = performance.now(), lap = n => console.info(`[O4] ${n}: +${(performance.now() - T0).toFixed(0)} ms`);
+  lap('kit + textures ready');
+
+  // ─────────────────────────────────────────────────────────── form parameters
+  const HL = 48, HD = 13;                  // half length (x), half depth (z) of the wall line
+  const OVX = 49.6, OVZ = 14.9;            // roof overhang at the ends and the long sides
+  const H0 = 8.6, H1 = 24, CC = 17;        // eave height at the middle and at the ends; catenary scale
+  const AA = (H1 - H0) / (Math.cosh(HL / CC) - 1);
+  const hx = x => H0 + AA * (Math.cosh(x / CC) - 1);          // eave line along the length
+  const crown = z => 1.4 * (1 - (z / HD) ** 2);              // cross-fall: the roof domes 1.4 m across
+  const R = (x, z) => hx(x) + crown(z);                       // roof surface
+  const xAtH = y => CC * Math.acosh((y - H0) / AA + 1);       // |x| where the eave reaches y
+  const GL = .5;                                              // ground floor level (podium top)
+  const FLOORS = [5, 9.5, 14].map(y => ({ y, xs: xAtH(y + 4.5) })).filter(f => f.xs < HL - 4);
+  const XA = FLOORS[0].xs, XB = FLOORS[1].xs;                 // atrium edge, upper-wing edge
+  // arc length along the eave line, so ribs and battens keep an even rhythm up the steep ends
+  const NA = 2400, ARC_X = new Float64Array(NA + 1), ARC_S = new Float64Array(NA + 1);
+  for (let i = 1; i <= NA; i++) { const x = OVX * i / NA, p = OVX * (i - 1) / NA; ARC_X[i] = x; ARC_S[i] = ARC_S[i - 1] + Math.hypot(x - p, hx(x) - hx(p)); }
+  const sOfX = x => { const a = Math.abs(x), i = Math.min(NA - 1, Math.floor(a / OVX * NA)), f = (a - ARC_X[i]) / (ARC_X[i + 1] - ARC_X[i]); return Math.sign(x) * (ARC_S[i] + (ARC_S[i + 1] - ARC_S[i]) * f); };
+  const xOfS = s => { const a = Math.abs(s); let lo = 0, hi = NA; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ARC_S[m] <= a) lo = m; else hi = m; } const f = (a - ARC_S[lo]) / (ARC_S[hi] - ARC_S[lo] || 1); return Math.sign(s) * (ARC_X[lo] + (ARC_X[hi] - ARC_X[lo]) * f); };
+  const arcXs = (xa, xb, step) => { const sa = sOfX(xa), sb = sOfX(xb), n = Math.max(1, Math.ceil((sb - sa) / step)); return Array.from({ length: n + 1 }, (_, i) => xOfS(sa + (sb - sa) * i / n)); };
+
+  // wards (bays), names illustrative
+  const BAYS = [
+    { name: 'Sowa Rigpa wing', note: 'traditional medicine', x0: -HL, x1: -XB },
+    { name: 'Outpatient clinics', note: 'consult + therapy', x0: -XB, x1: -XA },
+    { name: 'Arrival atrium', note: 'double-height hall', x0: -XA, x1: XA },
+    { name: 'Diagnostics', note: 'imaging + labs', x0: XA, x1: XB },
+    { name: 'Wellness retreat', note: 'rehab + rest', x0: XB, x1: HL },
+  ];
+  const bayOf = x => x < -XB ? 0 : x < -XA ? 1 : x < XA ? 2 : x < XB ? 3 : 4;
+  const splitByBay = (a, b) => { const cuts = [-XB, -XA, XA, XB].filter(c => c > a && c < b), pts = [a, ...cuts, b], out = [];
+    for (let i = 0; i < pts.length - 1; i++) out.push([pts[i], pts[i + 1], bayOf((pts[i] + pts[i + 1]) / 2)]); return out; };
+
+  // ─────────────────────────────────────────────────────────── materials
+  const gradCanvas = document.createElement('canvas'); gradCanvas.width = 4; gradCanvas.height = 256;
+  { const g = gradCanvas.getContext('2d'), lg = g.createLinearGradient(0, 256, 0, 0);
+    lg.addColorStop(0, '#5a3418'); lg.addColorStop(.3, '#c9772f'); lg.addColorStop(.7, '#ffc46e'); lg.addColorStop(1, '#fff0d2');
+    g.fillStyle = lg; g.fillRect(0, 0, 4, 256); }
+  const gradTex = new THREE.CanvasTexture(gradCanvas); gradTex.colorSpace = THREE.SRGBColorSpace;
+  gradTex.wrapS = THREE.RepeatWrapping; gradTex.wrapT = THREE.ClampToEdgeWrapping; gradTex.repeat.set(.01, 1 / 26);
+  // uplight wash on the slats: bright at the foot, gone by ~7 m (slat UVs run U = height)
+  const upCanvas = document.createElement('canvas'); upCanvas.width = 256; upCanvas.height = 4;
+  { const g = upCanvas.getContext('2d'), lg = g.createLinearGradient(0, 0, 256, 0);
+    lg.addColorStop(0, '#ffffff'); lg.addColorStop(.12, '#c8c8c8'); lg.addColorStop(.45, '#3a3a3a'); lg.addColorStop(1, '#000000');
+    g.fillStyle = lg; g.fillRect(0, 0, 256, 4); }
+  const upTex = new THREE.CanvasTexture(upCanvas); upTex.colorSpace = THREE.SRGBColorSpace;
+  upTex.wrapS = upTex.wrapT = THREE.ClampToEdgeWrapping; upTex.repeat.set(1 / 7, 1); upTex.offset.set(-GL / 7, 0);
+
+  const glass = variant(M.M_glass, { transparent: true, opacity: .26, depthWrite: false, side: THREE.DoubleSide });
+  const glassInt = variant(M.M_glass, { transparent: true, opacity: .32, depthWrite: false });
+  const deckMat = variant(M.M_timber_cedar, { side: THREE.DoubleSide });
+  const intTimber = variant(M.M_timber_cedar, { emissive: new THREE.Color(0xffa45a), emissiveIntensity: 0 });
+  const intFloor = variant(M.M_stone_masonry, { emissive: new THREE.Color(0xffb36b), emissiveIntensity: 0 });
+  const lanternGlow = variant(M.M_window_glow, {});
+  const lampGlow = variant(M.M_window_glow, {});
+  const VARY = [1, .92, 1.08, .95, 1.04];
+  const BAY = BAYS.map((b, id) => ({
+    ...b, id, level: 0, vel: 0, target: 0, hover: 0, vary: VARY[id],
+    wall: variant(M.M_timber_cedar, { emissive: new THREE.Color(0xffb062), emissiveMap: gradTex, emissiveIntensity: 0, side: THREE.DoubleSide }),
+    batten: variant(M.M_bamboo_slat, { emissive: new THREE.Color(0xffbf73), emissiveIntensity: 0 }),
+    slat: variant(M.M_bamboo_slat, { emissive: new THREE.Color(0xffa64d), emissiveMap: upTex, emissiveIntensity: 0 }),
+    glow: variant(M.M_window_glow, {}),
+  }));
+
+  // ─────────────────────────────────────────────────────────── geometry helpers
+  const ni = g => g.index ? g.toNonIndexed() : g;
+  const bins = new Map();
+  const put = (key, g) => { if (!bins.has(key)) bins.set(key, []); bins.get(key).push(ni(g)); };
+  const flush = (key, mat, parent, name, { cast = true } = {}) => {
+    const list = bins.get(key); if (!list?.length) return null;
+    const m = new THREE.Mesh(mergeGeometries(list, false), mat); m.name = name; m.castShadow = cast; m.receiveShadow = true;
+    parent.add(m); bins.delete(key); return m;
+  };
+  const rbox = (w, h, d, r = .06, seg = 2, along = null) => metricUV(new RoundedBoxGeometry(w, h, d, seg, Math.min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3)), { along });
+  const bx = (w, h, d, along = null) => metricUV(new THREE.BoxGeometry(w, h, d), { along });
+  // box placed first, then UV'd: UVs follow world height (needed by the height-driven emissive gradients)
+  const bxW = (w, h, d, x, y, z, along = null) => metricUV(new THREE.BoxGeometry(w, h, d).translate(x, y, z), { along });
+  const at = (g, x, y, z, rz = 0, ry = 0, rx = 0) => { if (rx) g.rotateX(rx); if (rz) g.rotateZ(rz); if (ry) g.rotateY(ry); return g.translate(x, y, z); };
+  const UP = new THREE.Vector3(0, 1, 0), V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const rod = (a, b, r0, r1 = r0, seg = 10) => {
+    const len = a.distanceTo(b), g = scaleUV(new THREE.CylinderGeometry(r1, r0, len, seg), 2 * Math.PI * r0, len);
+    const q = new THREE.Quaternion().setFromUnitVectors(UP, b.clone().sub(a).normalize());
+    return ni(g).applyMatrix4(new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(.5), q, new THREE.Vector3(1, 1, 1)));
+  };
+  const rnd = (() => { let a = 4404; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();
+  const EXT = { bevelEnabled: true, bevelThickness: .03, bevelSize: .03, bevelSegments: 3, curveSegments: 1 };
+  /** transverse rib in the plane x = x0: profile across z from the roof surface, extruded along x (bevelled) */
+  function ribGeo(x0, { t = .26, up = .45, dn = .5, zE = OVZ, n = 26 } = {}) {
+    const top = [], bot = [];
+    for (let i = 0; i <= n; i++) {
+      const z = -zE + 2 * zE * i / n, taper = Math.abs(z) <= HD ? 1 : 1 - .55 * (Math.abs(z) - HD) / Math.max(zE - HD, .01);
+      top.push(new THREE.Vector2(z, R(x0, z) + up)); bot.push(new THREE.Vector2(z, R(x0, z) - dn * taper));
+    }
+    const g = new THREE.ExtrudeGeometry(new THREE.Shape([...top, ...bot.reverse()]), { ...EXT, depth: t - .06 });
+    g.rotateY(-Math.PI / 2); return g.translate(x0 + (t - .06) / 2, 0, 0);   // shape x → world z (grain along the rib)
+  }
+  /** beam that follows a profile in the xy-plane (eave ring beams, fascias), extruded along z */
+  function profileBeam(xs, topFn, botFn, depth, z0) {
+    const pts = [...xs.map(x => new THREE.Vector2(x, topFn(x))), ...[...xs].reverse().map(x => new THREE.Vector2(x, botFn(x)))];
+    return new THREE.ExtrudeGeometry(new THREE.Shape(pts), { ...EXT, bevelSegments: 2, depth: depth - .06 }).translate(0, 0, z0 + .03);
+  }
+
+  // ─────────────────────────────────────────────────────────── model groups (design.md §9.3)
+  const root = new THREE.Group(); root.name = 'gmc_obj_o4-healthcare-centre';
+  const G = n => { const g = new THREE.Group(); g.name = n; root.add(g); return g; };
+  const Lstruct = G('L_structure'), Lfacade = G('L_facade'), Lroof = G('L_roof'), Lglaze = G('L_glazing'), Lint = G('L_interior'), Lglow = G('L_glow');
+
+  // ─────────────────────────────────────────────────────────── 1 · roof (ribs, deck, fascias)
+  const ribXs = []; { const sEnd = sOfX(OVX - .15); for (let s = .85; s < sEnd; s += 1.7) { const x = xOfS(s); if (Math.abs(x - HL) > .7) ribXs.push(x, -x); } }
+  for (const x of ribXs) put('rib', ribGeo(x));
+  flush('rib', M.M_bamboo_slat, Lroof, 'roof_ribs');
+  for (const s of [-1, 1]) {
+    put('frame', ribGeo(s * HL, { t: .6, up: .5, dn: 1.15 }));                                 // end portal frames (glulam)
+    put('fascia', ribGeo(s * (OVX - .06), { t: .14, up: .08, dn: .16 }));                      // end edge of the deck
+  }
+  flush('frame', M.M_glulam, Lstruct, 'end_frames');
+  { // roof deck: one curved surface under the ribs, UVs in metres along the arc
+    const xs = arcXs(-OVX, OVX, .8), nz = 22, pos = [], uv = [], idx = [];
+    xs.forEach(x => { for (let j = 0; j <= nz; j++) { const z = -OVZ + 2 * OVZ * j / nz; pos.push(x, R(x, z) - .02, z); uv.push(sOfX(x), z); } });
+    for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < nz; j++) { const a = i * (nz + 1) + j, b = a + 1, c = a + nz + 1, d = c + 1; idx.push(a, b, c, b, d, c); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, deckMat); m.name = 'roof_deck'; Lroof.add(m);
+    const ex = arcXs(-OVX + .1, OVX - .1, 1.2);
+    for (const s of [-1, 1]) put('fascia', profileBeam(ex, x => R(x, OVZ) + .07, x => R(x, OVZ) - .17, .14, s > 0 ? OVZ - .02 : -OVZ - .12));
+  }
+  flush('fascia', M.M_glulam, Lroof, 'roof_fascia');
+  // steel knife plates where each rib lands on the eave beam
+  { const pts = []; for (const x of ribXs) if (Math.abs(x) < HL - .5) for (const s of [-1, 1]) pts.push([x, hx(x) - .95, s * (HD + .27)]);
+    const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(.42, .62, .04), M.M_steel_dark, pts.length); inst.name = 'rib_connectors';
+    const d = new THREE.Object3D(); pts.forEach(([x, y, z], i) => { d.position.set(x, y, z); d.rotation.set(0, 0, Math.atan(AA / CC * Math.sinh(x / CC))); d.updateMatrix(); inst.setMatrixAt(i, d.matrix); });
+    Lstruct.add(inst); }
+
+  // ─────────────────────────────────────────────────────────── 2 · primary structure (eave beams, posts, podium)
+  { const ex = arcXs(-HL - .3, HL + .3, 1.0);
+    for (const s of [-1, 1]) put('ring', profileBeam(ex, x => hx(x) - .5, x => hx(x) - 1.3, .5, s * HD - .25)); }
+  flush('ring', M.M_glulam, Lstruct, 'eave_beams');
+  const postsL = []; for (let k = -15; k <= 15; k++) postsL.push(k * 3);
+  const postsE = [-9.75, -6.5, -3.25, 0, 3.25, 6.5, 9.75];
+  const shoes = [];
+  for (const s of [-1, 1]) {
+    for (const x of postsL) {
+      if (s > 0 && x === 0) continue;                                  // the entrance
+      const top = hx(x) - .5; put('post', at(rbox(.4, top - GL, .72, .06, 2, 'y'), x, (GL + top) / 2, s * HD)); shoes.push([x, s * HD, 0]);
+    }
+    for (const z of postsE) { const top = R(s * HL, z) - 1.15; put('post', at(rbox(.72, top - GL, .4, .06, 2, 'y'), s * HL, (GL + top) / 2, z)); shoes.push([s * HL, z, 1]); }
+    for (const zs of [-1, 1]) { const top = hx(HL) - .5; put('post', at(rbox(.8, top - GL, .8, .08, 2, 'y'), s * (HL - .05), (GL + top) / 2, zs * HD)); }
+  }
+  flush('post', M.M_timber_cedar, Lstruct, 'posts');
+  { const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(.62, .22, .94), M.M_steel_dark, shoes.length); inst.name = 'post_shoes';
+    const d = new THREE.Object3D(); shoes.forEach(([x, z, r], i) => { d.position.set(x, GL + .11, z); d.rotation.set(0, r ? Math.PI / 2 : 0, 0); d.updateMatrix(); inst.setMatrixAt(i, d.matrix); });
+    Lstruct.add(inst); }
+  // stone podium (bottom at ground contact, y 0) + entrance steps + lintel
+  put('podium', at(rbox(2 * HL + 3, GL, 2 * HD + 3, .08, 2), 0, GL / 2, 0));
+  [[.37, 15.25], [.23, 15.75], [.11, 16.25]].forEach(([h, z]) => put('podium', at(rbox(10, h, .5, .04, 1, 'x'), 0, h / 2, z)));
+  flush('podium', M.M_stone_masonry, Lstruct, 'podium');
+  put('lintel', at(rbox(6.9, .55, .6, .06, 2, 'x'), 0, 4.35, HD));
+  flush('lintel', M.M_glulam, Lstruct, 'entrance_lintel');
+
+  // ─────────────────────────────────────────────────────────── 3 · slat screen (per ward, uplit at dusk)
+  const nearPost = (x, list, r = .4) => list.some(p => Math.abs(p - x) < r);
+  for (const s of [-1, 1]) {
+    for (let x = -HL + .55; x <= HL - .55; x += .42) {
+      if (nearPost(x, postsL.filter(p => !(s > 0 && p === 0)))) continue;
+      const top = hx(x) - 1.3 + .25, bot = s > 0 && Math.abs(x) < 3.2 ? 4.62 : GL;
+      put('slat' + bayOf(x), bxW(.07, top - bot, .24, x, (top + bot) / 2, s * HD, 'y'));
+    }
+    for (let z = -HD + .55; z <= HD - .55; z += .42) {
+      if (nearPost(z, postsE)) continue;
+      const top = R(s * HL, z) - 1.15 + .25;
+      put('slat' + (s < 0 ? 0 : 4), bxW(.24, top - GL, .07, s * HL, (top + GL) / 2, z, 'y'));
+    }
+  }
+  for (const b of BAY) flush('slat' + b.id, b.slat, Lfacade, `slat_screen_w${b.id}`);
+
+  // ─────────────────────────────────────────────────────────── 4 · glazing (inset 1.2 m behind the slats)
+  const ZG = HD - 1.2, XG = HL - 1.2;
+  { const xs = arcXs(-XG, XG, .8);
+    for (const s of [-1, 1]) {
+      const pts = [new THREE.Vector2(-XG, GL), ...xs.map(x => new THREE.Vector2(x, R(x, ZG) - .75)), new THREE.Vector2(XG, GL)];
+      const m = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(pts)).translate(0, 0, s * ZG), glass); m.name = 'glass_long'; m.renderOrder = 2; Lglaze.add(m);
+      for (let x = -XG + 1.5; x < XG; x += 3) put('mull', at(bx(.08, R(x, ZG) - .75 - GL, .14), x, (R(x, ZG) - .75 + GL) / 2, s * (ZG + .08)));
+      const zs = []; for (let i = 0; i <= 24; i++) zs.push(-ZG + 2 * ZG * i / 24);
+      const pe = [new THREE.Vector2(-ZG, GL), ...zs.map(z => new THREE.Vector2(z, R(s * XG, z) - .75)), new THREE.Vector2(ZG, GL)];
+      const e = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(pe)).rotateY(-Math.PI / 2).translate(s * XG, 0, 0), glass); e.name = 'glass_end'; e.renderOrder = 2; Lglaze.add(e);
+      for (let z = -ZG + 1.5; z < ZG; z += 3) put('mull', at(bx(.14, R(s * XG, z) - .75 - GL, .08), s * (XG + .08), (R(s * XG, z) - .75 + GL) / 2, z));
+    }
+    // entrance: door frames + a second glass line (draught lobby)
+    for (const x of [-2.6, -.9, .9, 2.6]) put('mull', at(bx(.1, 3.1, .16), x, GL + 1.55, ZG + .1));
+    put('mull', at(bx(5.4, .12, .18), 0, GL + 3.1, ZG + .1));
+  }
+  flush('mull', M.M_steel_dark, Lglaze, 'mullions');
+
+  // ─────────────────────────────────────────────────────────── 5 · interior (floors, rooms, lit spine, slatted ceiling)
+  put('floor', at(rbox(2 * XG - .4, .08, 2 * ZG - .4, .03, 1), 0, GL + .04, 0));
+  flush('floor', intFloor, Lint, 'ground_floor');
+  for (let i = 0; i < FLOORS.length; i++) {
+    const f = FLOORS[i];
+    for (const s of [-1, 1]) {
+      const xa = f.xs, xb = XG - .2, len = xb - xa, xm = s * (xa + xb) / 2;
+      put('slab', at(rbox(len, .42, 2 * ZG - .3, .05, 1, 'x'), xm, f.y - .21, 0));
+      for (const zs of [-1, 1]) {
+        put('fasc', at(rbox(len, .7, .24, .04, 1, 'x'), xm, f.y - .35, zs * (ZG - .35)));
+        for (const [a, b, id] of splitByBay(Math.min(s * xa, s * xb), Math.max(s * xa, s * xb))) put('glow' + id, at(new THREE.BoxGeometry(b - a, .05, .06), (a + b) / 2, f.y - .74, zs * (ZG - .2)));
+      }
+      // atrium-side balustrade
+      put('balG', at(bx(.04, 1.05, 2 * ZG - .6), s * (xa - .1), f.y + .55, 0));
+      put('rail', at(bx(.08, .07, 2 * ZG - .6), s * (xa - .1), f.y + 1.1, 0));
+    }
+  }
+  flush('slab', intTimber, Lint, 'floor_slabs'); flush('fasc', M.M_glulam, Lint, 'slab_fascias');
+  flush('balG', glassInt, Lint, 'balustrade_glass', { cast: false }); flush('rail', M.M_steel_dark, Lint, 'balustrade_rails');
+  // rooms: partitions every 6 m on every floor of the wings (front + back of a central spine)
+  const levels = [{ y: GL, xs: XA }, ...FLOORS];
+  for (let i = 0; i < levels.length; i++) {
+    const L0 = levels[i], next = levels[i + 1];
+    for (let ax = L0.xs + 3.5; ax < XG - 1.5; ax += 6) for (const s of [-1, 1]) {
+      const x = s * ax, ceil = next && ax >= next.xs ? next.y - .42 : R(x, ZG) - .8, h = ceil - L0.y; if (h < 2.4) continue;
+      for (const zs of [-1, 1]) put('wall' + bayOf(x), bxW(.16, h, ZG - 1.4, x, L0.y + h / 2, zs * (ZG / 2 + .45)));
+    }
+  }
+  // spine wall (feature wall in the atrium), one shape per ward
+  for (const b of BAY) {
+    const a = Math.max(b.x0, -XG + .3), c = Math.min(b.x1, XG - .3), xs = arcXs(a, c, .8);
+    put('wall' + b.id, new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(a, GL), ...xs.map(x => new THREE.Vector2(x, R(x, 0) - .85)), new THREE.Vector2(c, GL)])).translate(0, 0, -.6));
+  }
+  // slatted ceiling: longitudinal bamboo battens under the ribs, following the saddle
+  for (let zb = -ZG + .5; zb <= ZG - .5 + 1e-6; zb += .8) {
+    const xs = arcXs(-XG + .2, XG - .2, 1.6);
+    for (let i = 0; i < xs.length - 1; i++) {
+      const x0 = xs[i], x1 = xs[i + 1], y0 = R(x0, zb) - .68, y1 = R(x1, zb) - .68;
+      put('bat' + bayOf((x0 + x1) / 2), at(bx(Math.hypot(x1 - x0, y1 - y0) + .02, .1, .26, 'x'), (x0 + x1) / 2, (y0 + y1) / 2, zb, Math.atan2(y1 - y0, x1 - x0)));
+    }
+  }
+  // atrium: reception desk, planters with trees, hanging lanterns
+  put('desk', at(rbox(8, 1.1, 1.7, .1, 2, 'x'), 0, GL + .55, 4.2));
+  put('glow2', at(new THREE.BoxGeometry(7.6, .05, .3), 0, GL + 1.12, 4.9));
+  flush('desk', variant(M.M_timber_dark, {}), Lint, 'reception_desk');
+  { const spots = [[-9, 6.5], [9, 6.5], [-10, -5.5], [10, -5.5]];
+    for (const [x, z] of spots) put('planter', at(rbox(3.2, .8, 3.2, .12, 2), x, GL + .4, z));
+    flush('planter', M.M_stone_masonry, Lint, 'planters');
+    Lint.add(createTrees(M, spots.map(([x, z]) => ({ x, y: GL + .8, z, height: 6.2, species: 'broadleaf', lod: 0 })), { name: 'atrium_trees' })); }
+  { const spots = [];
+    for (let x = -12; x <= 12; x += 4) for (const z of [-8.5, -3, 2.5, 8.5]) { const ceil = R(x, z) - .8; spots.push([x + (z > 0 ? 1 : -1) * .6, ceil - 2.6 - ((x + 12 + z) % 3 + 3) % 3 * .7, z, ceil]); }
+    const d = new THREE.Object3D(), n = spots.length;
+    const body = new THREE.InstancedMesh(new THREE.CylinderGeometry(.32, .42, .9, 12), lanternGlow, n); body.name = 'atrium_lanterns';
+    const cap = new THREE.InstancedMesh(new THREE.CylinderGeometry(.5, .5, .12, 12).translate(0, .51, 0), M.M_steel_dark, n); cap.name = 'lantern_caps';
+    const cord = new THREE.InstancedMesh(new THREE.CylinderGeometry(.02, .02, 1, 4).translate(0, .5, 0), M.M_steel_dark, n); cord.name = 'lantern_cords';
+    spots.forEach(([x, y, z, ceil], i) => {
+      d.position.set(x, y, z); d.scale.set(1, 1, 1); d.updateMatrix(); body.setMatrixAt(i, d.matrix); cap.setMatrixAt(i, d.matrix);
+      d.position.set(x, y + .57, z); d.scale.set(1, Math.max(.1, ceil - y - .57), 1); d.updateMatrix(); cord.setMatrixAt(i, d.matrix);
+    });
+    body.castShadow = false; Lglow.add(body); Lint.add(cap, cord); }
+  // people: atrium, wing floors at the windows
+  { // kit people (1.7.0): visitors and staff in gho, kira and everyday clothes; forest-LOD bodies keep the model in budget
+    const list = [], pose = () => { const u = rnd(); return u < .4 ? 'stand' : u < .7 ? 'talk' : 'walk'; };
+    for (let i = 0; i < 16; i++) list.push({ x: -13 + rnd() * 26, y: GL + .08, z: -10 + rnd() * 20, pose: pose(), child: rnd() < .15 });
+    for (const f of levels) for (let i = 0; i < 6; i++) { const s = rnd() < .5 ? -1 : 1, x = s * (f.xs + 1 + rnd() * (XG - f.xs - 2)), zs = rnd() < .5 ? -1 : 1;
+      list.push({ x, y: f.y + (f.y === GL ? .08 : 0), z: zs * (ZG - 1 - rnd() * 2.5), yaw: zs > 0 ? rnd() - .5 : Math.PI + rnd() - .5, pose: rnd() < .6 ? 'stand' : 'talk' }); }   // facing the glass
+    Lint.add(createPeople(M, list, { name: 'people_inside', lod: 1, seed: 41 })); }
+
+  // ─────────────────────────────────────────────────────────── 6 · exterior light (eave downlights, uplight strips)
+  for (const s of [-1, 1]) {
+    for (let x = -39; x <= 39; x += 3) put('glow' + bayOf(x), at(new THREE.CircleGeometry(.17, 18), x, R(x, s * (HD + 1)) - .1, s * (HD + 1), 0, 0, Math.PI / 2));
+    for (const [a, b, id] of splitByBay(-HL + .4, HL - .4)) put('glow' + id, at(new THREE.BoxGeometry(b - a, .05, .1), (a + b) / 2, GL + .03, s * (HD + .42)));
+    put('glow' + (s < 0 ? 0 : 4), at(new THREE.BoxGeometry(.1, .05, 2 * HD - .8), s * (HL + .42), GL + .03, 0));
+  }
+  for (const b of BAY) {
+    flush('wall' + b.id, b.wall, Lint, `lit_walls_w${b.id}`);
+    flush('bat' + b.id, b.batten, Lint, `ceiling_battens_w${b.id}`);
+  }
+  for (const b of BAY) flush('glow' + b.id, b.glow, Lglow, `glow_w${b.id}`, { cast: false });
+  lap('building built');
+
+  // ─────────────────────────────────────────────────────────── 7 · context (river valley plinth; preview only, not exported)
+  const context = new THREE.Group(); context.name = '__context';
+  const { fbm } = createNoise(4404);
+  const X0 = -100, X1 = 100, Z0 = -72, Z1 = 70, WL = -1.15;
+  const zr = x => 33.5 + 2.2 * Math.sin(x / 37 + .6);                      // road centre line
+  const CH = [[47.5, 2.6, 0, 31, 6.2], [55.5, 3.4, 2.1, 23, 4.6], [63, 2.2, 4, 41, 5.4]];  // braided channels: zc, amp, phase, wavelength, half-width
+  const channel = (x, z) => Math.max(...CH.map(([zc, a, p, l, w]) => smooth(w, w * .35, Math.abs(z - (zc + a * Math.sin(x / l + p))))));
+  const inPool = (x, z) => Math.abs(x) < 11 && z > 19.5 && z < 25;
+  function terrainY(x, z) {
+    let y = fbm(x / 60, z / 60, 3) * .5;
+    if (z < -24) y += Math.pow((-z - 24) / 48, 1.35) * 8 + fbm(x / 26 + 5, z / 26, 3) * 2.4 * clamp((-z - 24) / 20, 0, 1);
+    y += Math.pow(clamp((Math.abs(x) - 70) / 30, 0, 1), 1.5) * 4 * clamp((38 - z) / 30, 0, 1);
+    const dx = Math.max(Math.abs(x) - 64, 0), dz = Math.max(-24 - z, z - (zr(x) + 4), 0);
+    y *= smooth(0, 10, Math.hypot(dx, dz));                                  // level ground around the centre
+    const t = smooth(zr(x) + 5, zr(x) + 9, z);                               // bank down to the braided bed
+    if (t > 0) y = y * (1 - t) + (-.72 + fbm(x / 14, z / 9, 3) * .26 - channel(x, z) * 1.35) * t;
+    if (inPool(x, z)) y = -.7;
+    return y;
+  }
+  { const nx = 200, nz = 142, pos = [], uv = [], idxG = [], idxB = [];
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = X0 + (X1 - X0) * i / nx, z = Z0 + (Z1 - Z0) * j / nz; pos.push(x, terrainY(x, z), z); uv.push(x, -z); }
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1, x = X0 + (X1 - X0) * (i + .5) / nx, z = Z0 + (Z1 - Z0) * (j + .5) / nz;
+      (z > zr(x) + 5.5 ? idxB : idxG).push(a, c, b, b, c, d);
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex([...idxG, ...idxB]); g.addGroup(0, idxG.length, 0); g.addGroup(idxG.length, idxB.length, 1); g.computeVertexNormals();
+    wetBanks(g, WL, { band: .55, dark: .58 });                                  // gravel darkens where the river wets it
+    const m = new THREE.Mesh(g, [variant(M.M_terrain, { color: 0x8d9878, vertexColors: true }), variant(M.M_gravel, { vertexColors: true })]); m.name = 'valley_terrain'; context.add(m);
+    const outline = []; for (let x = X0; x < X1; x += 4) outline.push(new THREE.Vector2(x, Z1)); for (let z = Z1; z > Z0; z -= 4) outline.push(new THREE.Vector2(X1, z));
+    for (let x = X1; x > X0; x -= 4) outline.push(new THREE.Vector2(x, Z0)); for (let z = Z0; z < Z1; z += 4) outline.push(new THREE.Vector2(X0, z));
+    // v02: no strata skirt (the map surround continues past the edge)
+  }
+  const waterCut = variant(M.M_water, { color: 0x1d3c45, roughness: .3, side: THREE.DoubleSide });
+  { const z0 = 37;
+    // the braided channels run east → west; each point follows the tangent of its nearest channel
+    const flowAt = (x, z) => { let best = CH[0], bd = 1e9; for (const c of CH) { const d = Math.abs(z - (c[0] + c[1] * Math.sin(x / c[3] + c[2]))); if (d < bd) { bd = d; best = c; } }
+      return [-1, -best[1] / best[3] * Math.cos(x / best[3] + best[2])]; };
+    context.add(createWaterSurface(M, { x0: X0, x1: X1, z0, z1: Z1, level: WL, groundAt: terrainY, res: .6, deep: .8, name: 'river', flowAt, speed: .75, chop: 1.1, clarity: 1 }));
+    context.add(createWaterSurface(M, { x0: -11, x1: 11, z0: 19.5, z1: 25, level: -.12, groundAt: (x, z) => inPool(x, z) ? -.7 : .2, res: .5, deep: .9, name: 'reflecting_pool', flow: [1, .3], speed: .05, chop: .3, clarity: .75 }));
+    const cut = pts => { const pos = [], idx = []; pts.forEach(([x, z], n) => { pos.push(x, WL, z, x, Math.min(terrainY(x, z), WL), z); if (n) { const a = (n - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } });
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+      const m = new THREE.Mesh(g, waterCut); m.name = 'water_section'; context.add(m); };
+    const along = (n, f) => Array.from({ length: n + 1 }, (_, i) => f(i / n));
+    cut(along(160, t => [X0 + (X1 - X0) * t, Z1])); cut(along(40, t => [X0, z0 + (Z1 - z0) * t])); cut(along(40, t => [X1, z0 + (Z1 - z0) * t]));
+  }
+  { // road ribbon along the river bank
+    const pos = [], uv = [], idx = []; let n = 0;
+    for (let x = X0; x <= X1 + 1e-6; x += 2) { const zc = zr(x), a = zc - 3.5, b = zc + 3.5, y = Math.max(terrainY(x, a), terrainY(x, b), terrainY(x, zc)) + .08;
+      pos.push(x, y, a, x, y, b); uv.push(x, 0, x, 7); if (n) { const k = (n - 1) * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); } n++; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, variant(M.M_gravel, { color: 0x9a9488 })); m.name = 'road'; context.add(m); }
+  { // forecourt plaza (stone paving) with the reflecting pool cut out
+    const P = (x, z) => new THREE.Vector2(x, -z), rr = (x0, z0, x1, z1, r, seg = 6) => { const pts = [], c = [[x1 - r, z1 - r, 0], [x0 + r, z1 - r, 90], [x0 + r, z0 + r, 180], [x1 - r, z0 + r, 270]];
+      for (const [cx, cz, a0] of c) for (let i = 0; i <= seg; i++) { const a = (a0 + 90 * i / seg) * Math.PI / 180; pts.push(P(cx + Math.cos(a) * r, cz + Math.sin(a) * r)); } return pts; };
+    const shape = new THREE.Shape(rr(-40, 14.6, 40, 31, 4)); shape.holes.push(new THREE.Path(rr(-11, 19.5, 11, 25, .5, 2).reverse()));
+    const g = new THREE.ShapeGeometry(shape, 6).rotateX(-Math.PI / 2).translate(0, .06, 0);
+    const m = new THREE.Mesh(g, M.M_stone_masonry); m.name = 'plaza'; context.add(m);
+    put('cope', at(rbox(22.8, .32, .4, .05, 1, 'x'), 0, .1, 19.3)); put('cope', at(rbox(22.8, .32, .4, .05, 1, 'x'), 0, .1, 25.2));
+    put('cope', at(rbox(.4, .32, 5.5, .05, 1, 'z'), -11.2, .1, 22.25)); put('cope', at(rbox(.4, .32, 5.5, .05, 1, 'z'), 11.2, .1, 22.25));
+    flush('cope', M.M_stone_masonry, context, 'pool_coping');
+    for (const x of [-15, 15]) for (const z of [20.2, 24.3]) put('bench', at(rbox(3, .45, .6, .06, 2, 'x'), x, .29, z));
+    flush('bench', M.M_timber_cedar, context, 'benches');
+  }
+  { // medicinal herb gardens either side of the plaza: raised beds with timber edging
+    for (const s of [-1, 1]) for (let z = 16; z <= 29.5; z += 2.3) {
+      put('bed', at(rbox(17, .34, 1.5, .05, 1, 'x'), s * 53.5, .17, z));
+      for (const dz of [-.8, .8]) put('edge', at(rbox(17.3, .42, .1, .03, 1, 'x'), s * 53.5, .21, z + dz));
+    }
+    flush('bed', M.M_paddy, context, 'herb_beds'); flush('edge', M.M_timber_dark, context, 'bed_edging');
+  }
+  { // street lamps around the plaza and along the road
+    const spots = []; for (let x = -36; x <= 36; x += 12) spots.push([x, 30.2]); for (const x of [-38, 38]) spots.push([x, 16.5]);
+    for (let x = -90; x <= 90; x += 18) if (Math.abs(x) > 42) spots.push([x, zr(x) - 4.2]);
+    const d = new THREE.Object3D();
+    const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(.06, .09, 4.2, 8).translate(0, 2.1, 0), M.M_steel_dark, spots.length); pole.name = 'lamp_poles';
+    const head = new THREE.InstancedMesh(new THREE.CylinderGeometry(.22, .16, .5, 12).translate(0, 4.4, 0), lampGlow, spots.length); head.name = 'lamp_heads';
+    const hat = new THREE.InstancedMesh(new THREE.CylinderGeometry(.05, .34, .16, 12).translate(0, 4.72, 0), M.M_steel_dark, spots.length); hat.name = 'lamp_hats';
+    spots.forEach(([x, z], i) => { d.position.set(x, terrainY(x, z) + .06, z); d.updateMatrix(); pole.setMatrixAt(i, d.matrix); head.setMatrixAt(i, d.matrix); hat.setMatrixAt(i, d.matrix); });
+    head.castShadow = false; context.add(pole, head, hat); }
+  { // forest behind and beside (mixed species, pines higher up), shrubs on the bank, specimen trees on the plaza
+    // heights stay ≤ 60 % of the 24 m hero above their own ground (design.md §7)
+    const trees = [], taken = [];
+    const free = (x, z, r) => taken.every(([a, b, q]) => (a - x) ** 2 + (b - z) ** 2 > (r + q) ** 2 * .36);
+    for (let t = 0; trees.length < 0 && t < 80000; t++) {
+      const x = X0 + 3 + rnd() * (X1 - X0 - 6), z = Z0 + 3 + rnd() * (Z1 - Z0 - 6);
+      const back = z < -27, side = Math.abs(x) > 67 && z < zr(x) - 5;
+      if (!back && !side) continue;
+      const y = terrainY(x, z), hi = clamp((y - 2) / 6, 0, 1), u = rnd();
+      const species = u < .5 - hi * .3 ? 'broadleaf' : u < .72 - hi * .3 ? 'sal' : u < .88 ? 'chirPine' : 'bluePine';
+      const height = { broadleaf: 9 + rnd() * 4, sal: 11 + rnd() * 3, chirPine: 11 + rnd() * 3, bluePine: 8 + rnd() * 4 }[species], r = height * .33;
+      if (!free(x, z, r)) continue; taken.push([x, z, r]); trees.push({ x, y, z, height, species });
+      if (rnd() < .35 && (back ? z > -40 : Math.abs(x) < 80)) trees.push({ x: x + (rnd() - .5) * 4, y, z: z + (rnd() - .5) * 4, height: 2 + rnd() * 1.5, species: 'shrub' });   // understory at the forest edge
+    }
+    for (let i = 0; i < 160; i++) { const x = X0 + 6 + rnd() * (X1 - X0 - 12); if (Math.abs(x) < 42) continue; const z = zr(x) + 4.4 + rnd() * 2; trees.push({ x, y: terrainY(x, z), z, height: 1.8 + rnd() * 1.6, species: 'shrub' }); }
+    for (const [x, z] of [[-26, 18], [26, 18], [-32, 27.5], [32, 27.5], [-62, -16], [61, -12], [-58, 4], [64, 6]]) trees.push({ x, y: terrainY(x, z), z, height: 8.5 + rnd() * 2, species: Math.abs(x) > 50 ? 'sal' : 'broadleaf', lod: 0 });
+    // v02: no forest or specimen trees (map environment)
+    // boulders on the gravel bars and in the shallows
+    const rocks = [];
+    for (let t = 0; rocks.length < 150 && t < 9000; t++) { const x = X0 + 4 + rnd() * (X1 - X0 - 8), z = 39 + rnd() * (Z1 - 42), y = terrainY(x, z); if (y < WL - .35) continue;
+      const big = rnd() < .2; rocks.push({ x, y: Math.max(y, WL - .2), z, size: big ? 1.1 + rnd() * 1.2 : .25 + rnd() * .6 }); }
+    for (let i = 0; i < 26; i++) { const x = X0 + 4 + rnd() * (X1 - X0 - 8), z = zr(x) + 5 + rnd() * 3.5; if (Math.abs(x) < 44) continue; rocks.push({ x, y: terrainY(x, z), z, size: .5 + rnd() * .9 }); }
+    context.add(createRocks(M, rocks, { name: 'river_boulders' }));
+    addWaterObstacles(context.getObjectByName('river'), rocks.filter(o => o.y < WL + .35).map(o => ({ x: o.x, z: o.z, r: o.size * .9 })));   // foam rings + wakes
+    // riverside planting: reeds and cattails on the wet margins and gravel bars, broad-leaf plants on the bank
+    const reeds = [], leaves = [];
+    for (let t = 0; reeds.length < 260 && t < 30000; t++) { const x = X0 + 3 + rnd() * (X1 - X0 - 6), z = zr(x) + 4.6 + rnd() * (Z1 - zr(x) - 7), y = terrainY(x, z);
+      if (y < WL - .12 || y > WL + .3) continue; reeds.push({ x, y: Math.max(y, WL - .05), z, s: .85 + rnd() * .5 }); }
+    for (let t = 0; leaves.length < 90 && t < 9000; t++) { const x = X0 + 3 + rnd() * (X1 - X0 - 6); if (Math.abs(x) < 42) continue; const z = zr(x) + 4.3 + rnd() * 3.5, y = terrainY(x, z);
+      if (y < WL + .05) continue; leaves.push({ x, y, z, s: .9 + rnd() * .5 }); }
+    // v02: no riverside planting
+    // grass tufts on the meadow around the centre, the bank and the forest edge (kept off paving, beds and the podium)
+    const tufts = [];
+    for (let t = 0; tufts.length < 0 && t < 120000; t++) {
+      const x = X0 + 2 + rnd() * (X1 - X0 - 4), z = -34 + rnd() * 80;
+      if (z > zr(x) + 6.5 || Math.abs(z - zr(x)) < 4.2) continue;                         // riverbed, road
+      if (Math.abs(x) < 51 && Math.abs(z) < 16.2) continue;                               // podium + eaves
+      if (Math.abs(x) < 41 && z > 14 && z < 31.5) continue;                               // plaza
+      if (Math.abs(x) > 44 && Math.abs(x) < 63 && z > 14.5 && z < 31) continue;           // herb beds
+      if (x > 52 && x < 66.5 && z > -8.5 && z < 3.5) continue;                            // the outdoor class (kept mown)
+      tufts.push({ x, y: terrainY(x, z), z, s: z < -27 ? 1.5 : 1.25 });
+    }
+    // v02: no grass
+  }
+  { // people on the plaza (full detail): strollers, families, small talking groups
+    const list = [];
+    for (let i = 0; i < 30; i++) { const x = -36 + rnd() * 72, z = 16 + rnd() * 13.5; if (inPool(x, z) || (Math.abs(x) < 12 && z > 19 && z < 25.6)) continue;
+      const u = rnd(); list.push({ x, y: .06, z, pose: u < .45 ? 'walk' : u < .75 ? 'talk' : 'stand', yaw: u < .45 ? (rnd() < .5 ? Math.PI / 2 : -Math.PI / 2) + (rnd() - .5) * .6 : undefined });
+      if (rnd() < .25) list.push({ x: x + .7, y: .06, z: z + .2, pose: 'walk', child: true, bag: rnd() < .6, yaw: list[list.length - 1].yaw }); }          // a child alongside, often with a school bag
+    for (const [gx, gz] of [[-22, 27], [19, 17.5], [30, 26]]) for (let k = 0; k < 3; k++) { const a = k / 3 * Math.PI * 2 + gx; list.push({ x: gx + Math.cos(a) * .85, y: .06, z: gz + Math.sin(a) * .85, yaw: Math.atan2(-Math.cos(a), -Math.sin(a)), pose: k ? 'talk' : 'stand' }); }   // groups in conversation
+    context.add(createPeople(M, list, { name: 'people_plaza', lod: 0, seed: 7 }));
+    // an outdoor class on the east lawn: children seated in rows facing their teacher on a low stone platform (after the user's reference)
+    const tx = 63.5, tz = -2.5;
+    put('dais', at(rbox(2.8, .55, 2.8, .08, 2), tx, terrainY(tx, tz) + .27, tz)); flush('dais', M.M_stone_masonry, context, 'teaching_platform');
+    const cls = seatedGroup({ x: 57.4, y: terrainY(57, tz), z: tz, faceX: tx, faceZ: tz, rows: 3, perRow: 5, seed: 3 });
+    cls.push({ x: tx, y: terrainY(tx, tz) + .55, z: tz, yaw: -Math.PI / 2, pose: 'sit', outfit: 'robe' });
+    context.add(createPeople(M, cls, { name: 'people_class', lod: 0, seed: 12 }));
+  }
+  lap('context built');
+
+  const MAPENV_P = { X0, X1, Z0, Z1, E: 320, ST: 4, fall: .9, bump: .25, lights: 170, ground: ['valley_terrain'],
+      floor: () => WL + .2,
+      keepOut: (x, z) => Math.abs(x) < 75 && z > -40 && z < 45 };
+
+  // ─────────────────────────────────────────────────────────── v02 · masterplan-map environment (as airport v03)
+  // Dark-teal ground with a faint block texture, a surround that runs on past the plinth edge and dissolves into a
+  // teal void, scattered tiny lights. Vegetation and the plinth's strata skirt are not built.
+  const MAP_BG = new THREE.Color(0x0f2a2d);
+  { const P = MAPENV_P, sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const U = { uBg: { value: MAP_BG } };
+    const VERT_HEAD = ['#include <common>', 'varying vec3 vPW; varying float vMist;', '#ifdef MAP_MIST', 'attribute float mist;', '#endif'].join('\n');
+    const VERT_POS = ['#include <worldpos_vertex>', 'vec4 mpw = vec4(transformed, 1.);', '#ifdef USE_INSTANCING', 'mpw = instanceMatrix * mpw;', '#endif',
+      'vPW = (modelMatrix * mpw).xyz;', '#ifdef MAP_MIST', 'vMist = mist;', '#else', 'vMist = 0.;', '#endif'].join('\n');
+    const FRAG_HEAD = ['#include <common>', 'uniform vec3 uBg; varying vec3 vPW; varying float vMist;',
+      'float mH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }'].join('\n');
+    const FRAG_COL = ['#include <color_fragment>',
+      '{ vec2 bq = vPW.xz / vec2(11., 7.); bq.x += step(1., mod(floor(bq.y), 2.)) * .5;',             // map blocks (staggered)
+      '  vec2 bc = floor(bq), bf = fract(bq); float lit = .84 + .3 * mH(bc + 13.7);',
+      '  lit *= mix(1., .82, clamp(step(bf.x, .07) + step(bf.y, .09), 0., 1.)) * mix(1., 1.08, step(.92, bf.y));',
+      '  lit *= .88 + .24 * mH(floor(vPW.xz / vec2(37., 23.) + 3.3)); diffuseColor.rgb *= lit; }'].join('\n');
+    const FRAG_END = ['gl_FragColor.rgb = mix(gl_FragColor.rgb, uBg, clamp(vMist, 0., 1.));', '#include <dithering_fragment>'].join('\n');
+    const groundMat = (hex, mist = false) => {
+      const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(hex).multiplyScalar(.38), roughness: .95, metalness: 0 });
+      m.name = 'M_map_ground'; m.userData.clay = m; if (mist) m.defines = { MAP_MIST: 1 };
+      m.customProgramCacheKey = () => 'mapground' + mist;
+      m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U);
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', VERT_HEAD).replace('#include <worldpos_vertex>', VERT_POS);
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', FRAG_HEAD).replace('#include <color_fragment>', FRAG_COL).replace('#include <dithering_fragment>', FRAG_END); };
+      return m; };
+    const G = groundMat(0x2a7f8f), GB = groundMat(0x2f8592), GR = groundMat(0x3d8a94);
+    // plinth ground + boulders → map ground; the water's cut faces at the plinth edge are hidden (the surround closes it)
+    for (const n of P.ground) { const o = context.getObjectByName(n); if (o) o.material = Array.isArray(o.material) ? o.material.map((_, i) => i ? GB : G) : G; }
+    { const rk = context.getObjectByName('river_boulders'); rk?.traverse(o => { if (o.isMesh) { o.material = GR; if (o.isInstancedMesh) o.instanceColor = null; } }); }
+    context.traverse(o => { if (o.name === 'water_section') o.visible = false; });
+    // surround: continues the plinth edge height, settles to near-flat map ground, fades into the void
+    const { X0, X1, Z0, Z1, E, ST } = P, hx = (X1 - X0) / 2, hz = (Z1 - Z0) / 2, half = Math.max(hx, hz);
+    const BX0 = X0 - E, BX1 = X1 + E, BZ0 = Z0 - E, BZ1 = Z1 + E, nx = Math.round((BX1 - BX0) / ST), nz = Math.round((BZ1 - BZ0) / ST);
+    const pos = new Float32Array((nx + 1) * (nz + 1) * 3), mist = new Float32Array((nx + 1) * (nz + 1)), idx = [];
+    for (let j = 0, k = 0; j <= nz; j++) for (let i = 0; i <= nx; i++, k++) {
+      const x = BX0 + i * ST, z = BZ0 + j * ST, cx = Math.min(X1, Math.max(X0, x)), cz = Math.min(Z1, Math.max(Z0, z)), d = Math.hypot(x - cx, z - cz);
+      let y;
+      if (d === 0) y = terrainY(x, z) - 1.5;                                                          // hidden filler under the plinth
+      else { y = Math.max(terrainY(cx, cz), P.floor(cx, cz)) * (1 - sm(0, half * P.fall, d)) + P.bump * (Math.sin(x * .013 + z * .007) * Math.sin(z * .011 - x * .004));
+        mist[k] = Math.max(sm(half * .25, half * 2.2, d), 1 - sm(0, E * .25, Math.min(x - BX0, BX1 - x, z - BZ0, BZ1 - z))); }
+      pos.set([x, y, z], k * 3);
+    }
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, dd = c + 1; idx.push(a, c, b, b, c, dd); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('mist', new THREE.BufferAttribute(mist, 1)); g.setIndex(idx); g.computeVertexNormals();
+    const sur = new THREE.Mesh(g, groundMat(0x2a7f8f, true)); sur.name = 'map_surround'; sur.castShadow = false; sur.receiveShadow = true; context.add(sur);
+    // scattered lights (mostly warm, a few cool), kept off the model and the water
+    const N = P.lights, lp = new Float32Array(N * 3), lc = new Float32Array(N * 3), warm = new THREE.Color(0xffc45a), cool = new THREE.Color(0xbff3ea), c = new THREE.Color();
+    for (let k = 0, t = 0; k < N && t < 60000; t++) {
+      const i = Math.floor(rnd() * (pos.length / 3)), x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+      if (mist[i] > .7 || P.keepOut(x, z) || (x > X0 && x < X1 && z > Z0 && z < Z1)) continue;
+      lp.set([x, y + 1, z], k * 3); c.copy(rnd() < .85 ? warm : cool).multiplyScalar(2.2 + rnd() * 2.6); lc.set([c.r, c.g, c.b], k * 3); k++;
+    }
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(lp, 3)); lg.setAttribute('color', new THREE.BufferAttribute(lc, 3));
+    const pts = new THREE.Points(lg, new THREE.PointsMaterial({ size: 2, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, fog: false }));
+    pts.name = 'ground_lights'; context.add(pts);
+  }
+  stage.content.add(context);
+  stage.add(root);
+  root.traverse(o => { if (o.isMesh && [].concat(o.material)[0].name === 'M_glass') o.castShadow = false; });
+  context.traverse(o => { if (o.isMesh) o.receiveShadow = true; });
+  for (const n of ['river', 'reflecting_pool', 'lamp_heads']) context.getObjectByName(n).castShadow = false;
+  enableWaterReflections(stage, { scale: .5 });   // river + pool mirror the banks, trees and the building
+  { const bb = new THREE.Box3(V(-62, -1.5, -30), V(62, 27, 34)); stage.rig.fit(bb, 4096); }
+
+  // invisible hit volumes, one per ward (kept outside the model and outside clay/mood traversal)
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  for (const b of BAY) { const top = Math.max(hx(b.x0), hx(b.x1)) + 2, h = new THREE.Mesh(new THREE.BoxGeometry(b.x1 - b.x0, top, 2 * OVZ), hitMat);
+    h.position.set((b.x0 + b.x1) / 2, top / 2, 0); h.userData.bay = b; b.hit = h; stage.scene.add(h); }
+  await renderer.compileAsync(stage.scene, camera);
+  lap('shaders compiled');
+
+  // ─────────────────────────────────────────────────────────── 8 · sound (WebAudio, first gesture)
+  let ac = null, out = null, soundOn = false;
+  function audio() {
+    if (ac) return ac; ac = new AudioContext();
+    const comp = ac.createDynamicsCompressor(), dly = ac.createDelay(), fb = ac.createGain(), lp = ac.createBiquadFilter();
+    out = ac.createGain(); out.gain.value = .22; lp.type = 'lowpass'; lp.frequency.value = 3200; dly.delayTime.value = .21; fb.gain.value = .3;
+    out.connect(lp); lp.connect(comp); lp.connect(dly); dly.connect(fb); fb.connect(dly); dly.connect(comp); comp.connect(ac.destination); return ac;
+  }
+  const SCALE = [293.66, 329.63, 392, 440, 493.88, 587.33, 659.25, 783.99, 880];
+  function chime(i, up = true) {   // a soft wooden-bell tone (bamboo): fundamental + inharmonic partials
+    if (!soundOn) return; const c = audio(), t = c.currentTime, f = SCALE[(i * 2) % SCALE.length] * (up ? 1 : .5);
+    for (const [mul, g0] of [[1, .5], [2.76, .12], [5.4, .04]]) {
+      const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f * mul;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(g0, t + .006); g.gain.exponentialRampToValueAtTime(.0001, t + (up ? 2.2 : 1.1) / mul ** .3);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + 2.4);
+    }
+  }
+  function whoosh() {
+    if (!soundOn) return; const c = audio(), n = c.sampleRate * .6, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / n);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = buf; f.type = 'bandpass'; f.Q.value = .8;
+    f.frequency.setValueAtTime(300, c.currentTime); f.frequency.exponentialRampToValueAtTime(2400, c.currentTime + .55); g.gain.value = .18;
+    s.connect(f); f.connect(g); g.connect(out); s.start();
+  }
+
+  // ─────────────────────────────────────────────────────────── 9 · UI state
+  let look = 'dusk', quality = 'high';
+  const press = (sel, val, attr) => document.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === val)));
+  function setLook(v) { look = v; stage.setMood(v === 'clay' ? 'day' : v); stage.setClay(v === 'clay'); stage.scene.background = MAP_BG; press('[data-look]', v, 'look'); $('t-mood').textContent = v.toUpperCase(); whoosh(); }
+  document.querySelectorAll('[data-look]').forEach(b => b.onclick = () => setLook(b.dataset.look));
+  function cascade(on) { const order = on ? [...BAY] : [...BAY].reverse(); order.forEach((b, i) => setTimeout(() => { b.target = on ? 1 : 0; chime(b.id, on); }, i * 220)); }
+  const anyOn = () => BAY.some(b => b.target > 0);
+  function syncLightsButton() { $('a-lights').textContent = anyOn() ? 'Lights off' : 'Lights on'; }
+  $('a-lights').onclick = () => { cascade(!anyOn()); setTimeout(syncLightsButton, 10); };
+  $('a-sound').onclick = () => { soundOn = !soundOn; if (soundOn) audio().resume(); $('a-sound').textContent = soundOn ? 'Sound on' : 'Sound off'; $('a-sound').setAttribute('aria-pressed', String(soundOn)); };
+  function setQuality(q) { quality = q; stage.setQuality(q); $('t-q').textContent = q.toUpperCase(); $('a-q').textContent = 'Quality: ' + q; }
+  $('a-q').onclick = () => setQuality(quality === 'high' ? 'low' : 'high');
+  if (['localhost', '127.0.0.1'].includes(location.hostname)) { $('a-glb').hidden = false; $('a-glb').onclick = () => stage.exportGLB(root); }
+  $('s-kit').textContent = KIT_VERSION;
+
+  // ─────────────────────────────────────────────────────────── 10 · camera rig (two composed views)
+  // AERIAL: the reference framing, high over the river, south-west. RIVER: low on the gravel bed looking up at the screen.
+  const VIEWS = {
+    aerial: { az: 208, el: 21, target: V(2, 6, 6), half: 72 },
+    river: { az: 196, el: 4.5, target: V(0, 9, 12), half: 58 },
+  };
+  let view = 'aerial';
+  const cur = { az: VIEWS.aerial.az, el: VIEWS.aerial.el, target: VIEWS.aerial.target.clone(), half: VIEWS.aerial.half };
+  const st = { yaw: 0, pitch: 0, yawT: 0, pitchT: 0, zoom: 1, zoomT: 1, pan: V(0, 0, 0), panT: V(0, 0, 0) };
+  const distFor = half => { const aspect = innerWidth / innerHeight, vf = camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
+    return Math.max((aspect < 1 ? half * .62 : half) / Math.tan(hf / 2), half * .5 / Math.tan(vf / 2)); };
+  function setView(v) { view = v; press('[data-view]', v, 'view'); st.panT.set(0, 0, 0); st.zoomT = 1; st.yawT = st.pitchT = 0; whoosh(); }
+  document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => setView(b.dataset.view));
+  const ray = new THREE.Raycaster(), hit = new THREE.Vector3(), plane = new THREE.Plane(), fwd = new THREE.Vector3();
+  const ndc = (cx, cy) => new THREE.Vector2(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1);
+  const ZMIN = .06, ZMAX = 1.6;
+  function zoomAt(cx, cy, f) {
+    const nz = clamp(st.zoomT * f, ZMIN, ZMAX), c = cur.target.clone().add(st.panT);
+    camera.getWorldDirection(fwd); plane.setFromNormalAndCoplanarPoint(fwd.clone().negate(), c);
+    ray.setFromCamera(ndc(cx, cy), camera);
+    if (ray.ray.intersectPlane(plane, hit)) { const k = 1 - nz / st.zoomT; st.panT.addScaledVector(hit.sub(c), k); }
+    st.zoomT = nz; if (st.zoomT >= .999) st.panT.set(0, 0, 0); clampPan();
+  }
+  function clampPan() { st.panT.x = clamp(st.panT.x, -90, 90); st.panT.y = clamp(st.panT.y, -8, 28); st.panT.z = clamp(st.panT.z, -50, 50); }
+  function reset() { st.yawT = st.pitchT = 0; st.zoomT = 1; st.panT.set(0, 0, 0); }
+  $('a-reset').onclick = reset;
+
+  // ─────────────────────────────────────────────────────────── 11 · interaction
+  const el = renderer.domElement, pointers = new Map(); let drag = null, hoverBay = null, pinch0 = null, downAt = null;
+  el.addEventListener('contextmenu', e => e.preventDefault());
+  el.addEventListener('pointerdown', e => {
+    el.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (e.pointerType !== 'mouse') hoverAt(e.clientX, e.clientY);
+    if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch0 = { d: Math.hypot(a.x - b.x, a.y - b.y), z: st.zoomT }; drag = null; return; }
+    drag = { mode: e.shiftKey || e.button === 2 ? 'pan' : 'orbit', x: e.clientX, y: e.clientY };
+    el.style.cursor = drag.mode === 'pan' ? 'move' : 'grabbing';
+  });
+  el.addEventListener('pointermove', e => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch0 && pointers.size === 2) { const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y); zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, (pinch0.z * pinch0.d / d) / st.zoomT); return; }
+    if (drag) {
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+      if (drag.mode === 'orbit') { st.yawT = clamp(st.yawT - dx * .18, -70, 70); st.pitchT = clamp(st.pitchT + dy * .1, -cur.el + 1.5, 55 - cur.el); }
+      else { const k = distFor(cur.half) * st.zoom * Math.tan(camera.fov * Math.PI / 360) * 2 / innerHeight;
+        const rx = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), uy = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+        st.panT.addScaledVector(rx, -dx * k).addScaledVector(uy, dy * k); clampPan(); }
+      return;
+    }
+    hoverAt(e.clientX, e.clientY);
+  });
+  const end = e => {
+    pointers.delete(e.pointerId); if (pointers.size < 2) pinch0 = null;
+    const moved = downAt ? Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) : 99;
+    if (drag && drag.mode === 'orbit' && moved < 5 && performance.now() - downAt.t < 400 && hoverBay) { hoverBay.target = hoverBay.target > .5 ? 0 : 1; chime(hoverBay.id, hoverBay.target > .5); syncLightsButton(); hoverAt(e.clientX, e.clientY); }
+    drag = null; el.style.cursor = hoverBay ? 'pointer' : 'grab';
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(e.deltaY * .0012)); }, { passive: false });
+  el.addEventListener('dblclick', reset);
+  el.addEventListener('pointerleave', () => setHover(null));
+  function setHover(b) {
+    if (hoverBay && hoverBay !== b) hoverBay.hover = 0; hoverBay = b; if (b) b.hover = 1;
+    el.style.cursor = drag ? el.style.cursor : b ? 'pointer' : 'grab';
+    $('tip').style.opacity = b ? 1 : 0;
+  }
+  const hits = BAY.map(b => b.hit);
+  function hoverAt(cx, cy) {
+    ray.setFromCamera(ndc(cx, cy), camera);
+    const h = ray.intersectObjects(hits, false)[0], b = h ? h.object.userData.bay : null;
+    setHover(b);
+    if (b) {
+      const floors = 1 + FLOORS.filter(f => f.xs < Math.max(Math.abs(b.x0), Math.abs(b.x1)) - 2).length;
+      $('tip').innerHTML = `<b>${b.name}</b><br>${b.note.toUpperCase()}<br>FLOORS::${b.id === 2 ? '1 + VOID' : floors} · EAVE::${hx(Math.max(Math.abs(b.x0), Math.abs(b.x1))).toFixed(1)} M<br>LIGHTS::${b.target > .5 ? 'ON' : 'OFF'}<br><span style="opacity:.6">click to switch</span>`;
+      $('tip').style.left = Math.min(cx, innerWidth - 230) + 'px'; $('tip').style.top = cy + 'px';
+    }
+  }
+  addEventListener('keydown', e => {
+    if (e.target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
+    const k = e.key.toLowerCase();
+    if (k === 'l') $('a-lights').click();
+    else if (k === '1') setLook('dusk'); else if (k === '2') setLook('golden'); else if (k === '3') setLook('day'); else if (k === '4') setLook('clay');
+    else if (k === 'v') setView(view === 'aerial' ? 'river' : 'aerial');
+    else if (k === '0') reset(); else if (k === 'q') $('a-q').click(); else if (k === 'm') $('a-sound').click();
+    else if (k === '+' || k === '=') zoomAt(innerWidth / 2, innerHeight / 2, .8); else if (k === '-') zoomAt(innerWidth / 2, innerHeight / 2, 1.25);
+  });
+  el.style.cursor = 'grab';
+
+  // ─────────────────────────────────────────────────────────── 12 · loop
+  const clock = new THREE.Clock(); let frames = 0, acc = 0, t0 = performance.now(), downgraded = false, uiTick = 1, fixedDt = 0;
+  const bounceWarm = new THREE.Color(0x7a4a22), bounceBase = new THREE.Color();
+  const loop = () => {
+    const dt = fixedDt || Math.min(clock.getDelta(), .05), k = 1 - Math.exp(-dt * 7), kv = 1 - Math.exp(-dt * 3.2);
+    const V_ = VIEWS[view]; cur.az += (V_.az - cur.az) * kv; cur.el += (V_.el - cur.el) * kv; cur.half += (V_.half - cur.half) * kv; cur.target.lerp(V_.target, kv);
+    if (!drag) { st.yawT *= Math.exp(-dt * 1.6); st.pitchT *= Math.exp(-dt * 1.6); }
+    st.yaw += (st.yawT - st.yaw) * k; st.pitch += (st.pitchT - st.pitch) * k; st.zoom += (st.zoomT - st.zoom) * k; st.pan.lerp(st.panT, k);
+    if (!drag && Math.abs(st.yawT) < 1e-3 && Math.abs(st.yaw) < 1e-3) st.yaw = st.yawT = 0;
+    if (!drag && Math.abs(st.pitchT) < 1e-3 && Math.abs(st.pitch) < 1e-3) st.pitch = st.pitchT = 0;
+    if (Math.abs(st.zoomT - st.zoom) < 1e-5) st.zoom = st.zoomT;
+    if (st.pan.distanceToSquared(st.panT) < 1e-8) st.pan.copy(st.panT);
+    const tgt = cur.target.clone().add(st.pan), dist = distFor(cur.half) * st.zoom;
+    camera.position.copy(tgt).addScaledVector(sunDirection(cur.az + st.yaw, clamp(cur.el + st.pitch, 1.5, 80)), dist); camera.lookAt(tgt);
+    camera.near = Math.max(.2, dist / 1500); camera.far = 6000; camera.updateProjectionMatrix();
+    director.drive(camera);   // UI shell (embed): its tweened camera overrides the rig
+    // wards: damped spring towards target (slight overshoot, like lamps warming up)
+    const mood = MOODS[look === 'clay' ? 'day' : look], dusk = look === 'dusk' || look === 'golden', gk = look === 'golden' ? .5 : 1   /* golden hour: lamps on, half strength */, clay = look === 'clay';
+    let sum = 0, lit = 0;
+    for (const b of BAY) {
+      const goal = b.target * (1 + b.hover * .35);
+      b.vel += (goal - b.level) * 70 * dt; b.vel *= Math.exp(-dt * 11); b.level = Math.max(0, b.level + b.vel * dt);
+      b.glow.color.set(mood.glow.color).multiplyScalar(mood.glow.scale * (dusk ? b.level : 1));
+      b.wall.emissiveIntensity = (dusk ? gk * 1.6 : .14) * b.level * b.vary;
+      b.batten.emissiveIntensity = (dusk ? gk * .95 : .06) * b.level * b.vary;
+      b.slat.emissiveIntensity = (dusk ? gk * .85 : 0) * b.level;
+      sum += Math.min(b.level, 1); if (b.target > .5) lit++;
+    }
+    const avg = sum / BAY.length;
+    intTimber.emissiveIntensity = (dusk ? gk * .3 : .03) * avg; intFloor.emissiveIntensity = (dusk ? gk * .26 : .02) * avg;
+    lanternGlow.color.set(mood.glow.color).multiplyScalar(mood.glow.scale * (dusk ? 1.25 * BAY[2].level : 1));
+    lampGlow.color.set(mood.glow.color).multiplyScalar(mood.glow.scale * (dusk ? .85 : 1));
+    bounceBase.set(mood.hemi.ground); stage.rig.hemi.groundColor.copy(bounceBase).lerp(bounceWarm, clay || !dusk ? 0 : avg * .6);
+    if ((uiTick += dt) > .1) { uiTick = 0;
+      $('m-glow').style.width = (avg * 100).toFixed(0) + '%'; $('m-glow-v').textContent = (avg * 100).toFixed(0) + '%';
+      $('m-focus').style.width = hoverBay ? (Math.min(hoverBay.level, 1.35) / 1.35 * 100).toFixed(0) + '%' : '0%';
+      $('m-focus-v').textContent = hoverBay ? 'W' + (hoverBay.id + 1) : '—';
+      $('t-lit').textContent = `${lit}/${BAY.length}`; $('t-zoom').textContent = (1 / st.zoom).toFixed(2) + '×';
+      $('s-state').textContent = lit ? (lit === BAY.length ? 'LIVE' : 'PARTIAL') : 'DARK'; $('status').classList.toggle('dark', !lit); }
+    stage.composer.render();
+    if (fixedDt) return;
+    frames++; acc += dt; if (acc > .5) { $('t-fps').textContent = Math.round(frames / acc); if (!downgraded && performance.now() - t0 > 3500 && frames / acc < 34 && quality === 'high') { downgraded = true; setQuality('low'); } frames = 0; acc = 0; }
+  };
+  // UI shell director: hero framing + component categories (Masar-style component mode)
+  const director = createDirector(stage, {
+    hero: { az: 208, el: 21, tx: 2, ty: 6, tz: 6, half: 72, fov: 30 },
+    overview: { az: 215, el: 48, tx: 0, ty: 6, tz: 4, half: 80, fov: 30 },
+    components: [
+      { id: 'roof', label: 'Saddle roof', layers: ['L_roof'], color: 0xffc450, stat: { big: '96 m saddle roof', small: 'eave 8.6 m rising to 24 m · curved bamboo ribs' }, view: { az: 210, el: 45, tx: 0, ty: 14, tz: 0, half: 62 } },
+      { id: 'screen', label: 'Bamboo screen', layers: ['L_facade'], color: 0xf29a2e, stat: { big: 'Bamboo slat screen', small: '0.42 m rhythm · uplit at dusk' }, view: { az: 200, el: 22, tx: 0, ty: 8, tz: 13, half: 56 } },
+      { id: 'glazing', label: 'Glazing', layers: ['L_glazing'], color: 0xfff3dc, xray: true, stat: { big: '1.2 m inset glass line', small: 'a double-height arrival atrium' }, view: { az: 160, el: 30, tx: 0, ty: 8, tz: 0, half: 52 } },
+      { id: 'wards', label: 'Wards', layers: ['L_interior'], color: 0xe8a48a, xray: true, stat: { big: '5 wards', small: 'Sowa Rigpa · outpatients · atrium · diagnostics · wellness' }, view: { az: 215, el: 50, tx: 0, ty: 8, tz: 0, half: 54 } },
+      { id: 'structure', label: 'Structure', layers: ['L_structure'], color: 0xc8743a, stat: { big: 'Glulam frame', small: 'posts every 3 m · steel shoes · end portals' }, view: { az: 225, el: 35, tx: 0, ty: 10, tz: 0, half: 60 } },
+      { id: 'river', label: 'River & gardens', layers: ['river', 'reflecting_pool', 'herb_beds', 'plaza'], color: 0xffc450, stat: { big: 'A braided river', small: 'herb gardens · reflecting pool · reed banks' }, view: { az: 190, el: 55, tx: 0, ty: 0, tz: 35, half: 98 } },
+    ],
+  });
+  renderer.setAnimationLoop(loop);
+
+  setLook(EMBED ? 'golden' : 'dusk');
+  setTimeout(() => { $('loader').style.opacity = 0; setTimeout(() => $('loader')?.remove(), 900); if (!EMBED) setTimeout(() => { cascade(true); syncLightsButton(); }, 700); }, 60);
+
+  const report = (() => { try { return stage.validate(root); } catch (e) { return { ok: false, errors: [String(e)] }; } })(); console.info('[O4] validate', report);
+  window.__api = { stage, root, context, BAY, st, cur, setLook, setView, reset, zoomAt, cascade, validate: () => stage.validate(root), tris: () => countTriangles(root),
+    view(zoom = 1, px = 0, py = 0, pz = 0, yaw = 0, pitch = 0) { st.zoomT = st.zoom = zoom; st.panT.set(px, py, pz); st.pan.copy(st.panT); st.yawT = st.yaw = yaw; st.pitchT = st.pitch = pitch;
+      const V_ = VIEWS[view]; cur.az = V_.az; cur.el = V_.el; cur.half = V_.half; cur.target.copy(V_.target); },
+    lightsNow(v = 1) { BAY.forEach(b => { b.target = v; b.level = v; b.vel = 0; }); syncLightsButton(); },
+    step(n = 30) { fixedDt = 1 / 30; for (let i = 0; i < n; i++) loop(); fixedDt = 0; },
+    // UI shell
+    director, embedded: EMBED,
+    pause(v) { renderer.setAnimationLoop(v ? null : loop); if (!v) clock.getDelta(); },
+    warm() { loop(); clock.getDelta(); },   // render one frame while hidden: uploads textures before the reveal (no first-frame hitch)
+    setExposure(k) { renderer.toneMappingExposure = MOODS[look === 'clay' ? 'day' : look].exposure * k; } };
+  window.__ok = true;
+} catch (e) {
+  console.error(e); window.__err = String(e && e.stack || e);
+  const er = $('err'); er.hidden = false; er.textContent = 'Could not build the model: ' + e.message;
+  $('loader')?.remove();
+}
+</script>

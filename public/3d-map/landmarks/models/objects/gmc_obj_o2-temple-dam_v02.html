@@ -1,0 +1,947 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sankosh Temple-Dam</title>
+<link rel="stylesheet" href="/3d-map/vendor/fonts/fonts.css">
+<style>
+  /* Same shell as O1: one fixed composed view, UI floats in the corners. */
+  :root {
+    color-scheme: dark;
+    --bg: #18130f; --ink: #efece6; --ink-2: rgba(239,236,230,.7); --line: rgba(239,236,230,.14); --panel: rgba(24,19,15,.64);
+    --saffron: #fe6417; --maroon: #6d0033; --honey: #ffc450;
+    --f-display: "Belleza", "Cormorant Garamond", Georgia, serif;
+    --f-body: "Alegreya Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); overflow: hidden; }
+  #stage { position: fixed; inset: 0; touch-action: none; }
+  #stage canvas { display: block; }
+  .mono { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; }
+  .panel { position: fixed; background: var(--panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--line); border-radius: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-2); white-space: nowrap; }
+  .chip b { color: var(--ink); font-weight: 500; }
+  #telemetry { top: calc(16px + env(safe-area-inset-top, 0px)); left: calc(16px + env(safe-area-inset-left, 0px)); padding: 8px; max-width: 380px; }
+  #variants { top: calc(16px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); padding: 5px; display: flex; gap: 6px; }
+  .seg { display: flex; border-radius: 999px; overflow: hidden; }
+  .sep { width: 1px; background: var(--line); margin: 4px 2px; }
+  button { font: 500 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); background: transparent; border: 0; padding: 8px 14px; cursor: pointer; border-radius: 999px; }
+  button:hover { color: var(--ink); background: rgba(239,236,230,.07); }
+  button:focus-visible { outline: 2px solid var(--honey); outline-offset: 2px; }
+  button[aria-pressed="true"] { color: var(--bg); background: var(--ink); }
+  #hints { top: calc(16px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); padding: 12px 16px; line-height: 1.75; color: var(--ink-2); }
+  #hints b { color: var(--ink); font-weight: 500; }
+  #dock { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: calc(16px + env(safe-area-inset-left, 0px)); padding: 16px 18px; width: min(560px, calc(100vw - 32px)); display: grid; gap: 10px; }
+  #status { color: var(--ink-2); display: flex; gap: 14px; flex-wrap: wrap; }
+  #status .dot { color: var(--saffron); }
+  #status.dark .dot { color: var(--ink-2); }
+  #dock h1 { font: 400 clamp(22px, 3.2vw, 34px)/1.05 var(--f-display); margin: 0; letter-spacing: .01em; text-wrap: balance; }
+  #sub { color: var(--ink-2); }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .actions button { border: 1px solid var(--line); }
+  .actions button.primary { background: var(--maroon); color: var(--ink); border-color: transparent; }
+  .meters { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; }
+  .bar { height: 4px; border-radius: 4px; background: rgba(239,236,230,.12); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffaa3c, #fff3dc); border-radius: 4px; }
+  .bar i.water { background: linear-gradient(90deg, #2c5560, #9cc8d6); }
+  #tip { position: fixed; pointer-events: none; padding: 8px 10px; border-radius: 10px; background: rgba(24,19,15,.82); border: 1px solid var(--line); line-height: 1.6; transform: translate(14px, -50%); opacity: 0; transition: opacity .18s; }
+  #tip b { font-family: var(--f-display); font-size: 15px; font-weight: 400; letter-spacing: .02em; }
+  #tip i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  #loader { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 55%, #241d18, var(--bg) 70%); z-index: 20; transition: opacity .8s cubic-bezier(.16,1,.3,1); }
+  #loader .flame { width: 14px; height: 14px; border-radius: 50%; margin: 0 auto 14px; background: radial-gradient(circle, #fff3dc, #ffc450 45%, rgba(254,120,40,0) 72%); box-shadow: 0 0 22px 6px rgba(255,170,60,.35); animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.25); opacity: .75; } }
+  #err { position: fixed; right: 16px; bottom: 16px; max-width: 60vw; color: #ff8a8d; }
+  @media (max-width: 820px) { #hints { display: none; } #telemetry { max-width: calc(100vw - 32px); } #variants { top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: auto; right: calc(16px + env(safe-area-inset-right, 0px)); transform: none; flex-direction: column; } #dock { bottom: calc(118px + env(safe-area-inset-bottom, 0px)); } }
+  @media (prefers-reduced-motion: reduce) { #loader .flame { animation: none; } }
+</style>
+
+<div id="stage" aria-label="Sankosh Temple-Dam, 3D model"></div>
+
+<div id="telemetry" class="panel"><div class="chips mono">
+  <span class="chip">FPS::<b id="t-fps">–</b></span>
+  <span class="chip">MOOD::<b id="t-mood">DUSK</b></span>
+  <span class="chip">LAMPS::<b id="t-lit">0/2</b></span>
+  <span class="chip">FLOW::<b id="t-flow">0%</b></span>
+  <span class="chip">ZOOM::<b id="t-zoom">1.00</b></span>
+  <span class="chip">QUALITY::<b id="t-q">HIGH</b></span>
+</div></div>
+
+<div id="variants" class="panel">
+  <div class="seg" role="group" aria-label="Look">
+    <button data-look="dusk" aria-pressed="true">Dusk</button>
+    <button data-look="golden" aria-pressed="false">Golden</button>
+    <button data-look="day" aria-pressed="false">Day</button>
+    <button data-look="clay" aria-pressed="false">Clay</button>
+  </div>
+  <span class="sep"></span>
+  <div class="seg" role="group" aria-label="View">
+    <button data-view="front" aria-pressed="true">Front</button>
+    <button data-view="steps" aria-pressed="false">Steps</button>
+  </div>
+</div>
+
+<div id="hints" class="panel mono">
+  <b>Click</b> a tile · a ripple runs through the textile<br>
+  <b>Click</b> a temple · switch its lamps<br>
+  <b>Wheel / pinch</b> zoom to cursor · <b>+ −</b><br>
+  <b>Drag</b> tilt (springs back) · <b>Shift / right-drag</b> pan<br>
+  <b>W</b> release water · <b>L</b> lamps · <b>V</b> front / steps<br>
+  <b>1 2 3 4</b> dusk / golden / day / clay · <b>0</b> reset · <b>Q</b> quality · <b>M</b> sound
+</div>
+
+<div id="dock" class="panel">
+  <div id="status" class="mono"><span><span class="dot">●</span> DAM::<b id="s-state">HOLDING</b></span><span>GMC::O2</span><span>KIT::<b id="s-kit">–</b></span></div>
+  <h1>Sankosh Temple-Dam</h1>
+  <div id="sub" class="mono">STEPPED TEXTILE FACE · 40 TERRACES · 120 M HIGH · 348 M CREST · 2 TEMPLE NICHES</div>
+  <div class="actions">
+    <button id="a-water" class="primary">Release water</button>
+    <button id="a-lamps">Lamps off</button>
+    <button id="a-reset">Reset view</button>
+    <button id="a-sound" aria-pressed="false">Sound off</button>
+    <button id="a-q">Quality: high</button>
+    <button id="a-glb" hidden>Export GLB</button>
+  </div>
+  <div class="meters mono">
+    <span>LAMPS</span><span class="bar"><i id="m-glow"></i></span><span id="m-glow-v">0%</span>
+    <span>FLOW</span><span class="bar"><i id="m-flow" class="water"></i></span><span id="m-flow-v">0%</span>
+  </div>
+</div>
+
+<div id="tip" class="mono"></div>
+<div id="err" class="mono" hidden></div>
+<div id="loader"><div class="mono" style="text-align:center;color:rgba(239,236,230,.72)"><div class="flame"></div>BUILDING::TEXTURES</div></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "/3d-map/vendor/three/build/three.module.js",
+  "three/addons/": "/3d-map/vendor/three/addons/",
+  "gmc-kit": "../../shared/gmc-kit.js",
+  "gmc-people": "../../shared/gmc-people.js",
+  "gmc-component-mode": "../../shared/gmc-component-mode.js"
+} }
+</script>
+<script type="module">
+// ═══════════════════════════════════════════════════════════════════════════
+// GMC · O2 Sankosh Temple-Dam · v02: v01 in the masterplan-map environment (as airport v03): dark-teal block ground with a surround
+// that fades into a teal void, scattered lights, no vegetation, no strata skirt. v01 is kept unchanged.
+// Built on shared/gmc-kit.js (design.md). Units: metres. North = −Z: the
+// reservoir lies north (−Z), the stepped downstream face looks south (+Z).
+// Root: gmc_obj_o2-temple-dam. Pivot: centre of the dam toe on the riverbed.
+// Form after BIG's renders and the user's references: a V-gorge filled by a
+// stepped face of textile-patterned blocks (one block = one "pixel" of a
+// kira-like diamond weave), stairs climbing through the blocks, and two
+// lit temple niches cut into the face. Heights and widths are our reading
+// of the images, not survey data.
+// The gorge, forest and water are PREVIEW CONTEXT (not in the root, not
+// exported): on the map they come from the terrain and environment kits.
+// ═══════════════════════════════════════════════════════════════════════════
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { createPeople } from 'gmc-people';
+import { createDirector, isEmbedded } from 'gmc-component-mode';
+import { prepareTextures, createStage, createSkirt, createTrees, createRocks, createWaterSurface, addWaterObstacles, enableWaterReflections, createReeds, createBroadLeaves, wetBanks, metricUV, scaleUV, variant, MOODS, TOKENS, KIT_VERSION, sunDirection, countTriangles } from 'gmc-kit';
+
+const $ = id => document.getElementById(id);
+const EMBED = isEmbedded();   // inside the UI shell (?embed=1): no own chrome, golden, the shell drives the camera
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+try {
+  await Promise.race([new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))), new Promise(r => setTimeout(r, 120))]);
+
+  // ─────────────────────────────────────────────────────────── renderer + kit
+  await prepareTextures({ quality: 'high' });                   // kit 1.9.0: textures from cache or parallel workers, not ~10 s on this thread
+  const stage = createStage({ container: $('stage'), mood: 'dusk' });
+  stage.controls.dispose();
+  const M = stage.materials, camera = stage.camera, renderer = stage.renderer;
+  const T0 = performance.now(), lap = n => console.info(`[O2] ${n}: +${(performance.now() - T0).toFixed(0)} ms`);
+  lap('kit + textures ready');
+
+  // ─────────────────────────────────────────────────────────── form parameters
+  const NR = 40, RH = 3, TR = 2.4, H = NR * RH;          // 40 terraces: 3 m riser, 2.4 m tread (face slope 0.8 : 1), crest at 120 m
+  const BW = 6, BD = 3, GAP = .08;                        // block 6 m wide, 3 m deep (tread + 0.6 m under the next row), 8 cm joints
+  const zF = r => (NR - r) * TR;                          // front plane of row r (row 0 at the toe, z = 96)
+  const hw = y => 18 + 152 * Math.pow(clamp(y / H, 0, 2), 1.1);   // gorge half-width at height y (36 m at the bed, 340 m at the crest)
+  const span = r => hw(r * RH + RH) + 4;                  // each row runs 4 m into the rock
+  const rnd = (() => { let a = 4242; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();
+  const hash = (a, b) => { let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 1337, 0xc2b2ae35); h ^= h >>> 15; h = Math.imul(h, 0x27d4eb2f); h ^= h >>> 13; return (h >>> 0) / 4294967296; };
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+
+  // temple niches, in lattice units: c = centre column (×3 m), rc = centre row, a = half-width at rc (columns), h = half-height (rows)
+  // each row up or down narrows by 3 columns, so the opening is a stepped, flattened diamond like the woven motif around it
+  const NICHES = [
+    { id: 0, name: 'Main temple', c: 0, rc: 24, a: 12, k: 3, h: 4, deep: 10, s: 1, wings: true },
+    { id: 1, name: 'Upper shrine', c: 29, rc: 33, a: 7, k: 3, h: 2, deep: 7, s: .48, wings: false },
+  ];
+  const nicheHalfCols = (n, r) => { const dr = Math.abs(r - n.rc); if (dr > n.h) return -1; const w = n.a - n.k * dr; return w - (((w - dr) % 2) + 2) % 2; };
+  const inNiche = (n, r, col2) => { const w = nicheHalfCols(n, r); return w >= 0 && Math.abs(col2 - n.c) <= w; };
+  const nicheAt = (r, col2) => NICHES.find(n => inNiche(n, r, col2)) ?? null;
+  const W = (n, r) => { const w = nicheHalfCols(n, r); return w < 0 ? 0 : w * BW / 2 + BW / 2; };   // opening half-width in metres
+  for (const n of NICHES) { n.x = n.c * BW / 2; n.r0 = n.rc - n.h; n.r1 = n.rc + n.h; n.zBack = zF(n.r1) - BD - n.deep; }
+
+  // ─────────────────────────────────────────────────────────── textile pattern (design.md §2 textile-* tokens)
+  const FAM = [
+    [TOKENS.textileNavy, TOKENS.textileSlate, TOKENS.textileSky],            // cool
+    [TOKENS.textileMadder, TOKENS.textileVermilion, TOKENS.textileApricot],  // warm
+    [TOKENS.textilePeach, TOKENS.textileCream, TOKENS.textileAsh],           // light
+    [TOKENS.textileVermilion, TOKENS.textileApricot, TOKENS.textilePeach],   // warm-light
+    [TOKENS.textileCharcoal, TOKENS.textileNavy, TOKENS.textileSlate],       // dark
+  ];
+  const NAMES = new Map([[TOKENS.textileNavy, 'NAVY'], [TOKENS.textileSlate, 'SLATE'], [TOKENS.textileSky, 'SKY'], [TOKENS.textileMadder, 'MADDER'],
+    [TOKENS.textileVermilion, 'VERMILION'], [TOKENS.textileApricot, 'APRICOT'], [TOKENS.textilePeach, 'PEACH'], [TOKENS.textileCream, 'CREAM'],
+    [TOKENS.textileAsh, 'ASH'], [TOKENS.textileCharcoal, 'CHARCOAL'], [0xf3e6d2, 'LIME RIM']]);
+  const BAND = [0, 1, 3, 2, 0, 1, 2, 3, 0, 1, 4, 3, 2];   // family per concentric diamond band, read outward from the main niche
+  // diamond coordinates: u = (col2 + r) / 2, v = (col2 − r) / 2; a diamond in elevation is a square in (u, v)
+  function tileColour(r, col2) {
+    const u = (col2 + r) / 2, v = (col2 - r) / 2;
+    const n0 = NICHES[0], n1 = NICHES[1];
+    const d0 = Math.max(Math.abs(u - (n0.c + n0.rc) / 2), Math.abs(v - (n0.c - n0.rc) / 2));
+    const d1 = Math.max(Math.abs(u - (n1.c + n1.rc) / 2), Math.abs(v - (n1.c - n1.rc) / 2));
+    const per = 18, pu = ((u % per) + per) % per - per / 2 + .5, pv = ((v % per) + per) % per - per / 2 + .5;   // a field of free diamonds
+    const d2 = Math.max(Math.abs(pu), Math.abs(pv)) + 6;
+    const d = Math.min(d0 * .9 + 2, d1 * 1.1 + 4, d2 + Math.floor(hash(Math.floor(u / per), Math.floor(v / per) + 7) * 3) * 3);
+    const band = Math.floor(d / 3), fam = FAM[BAND[band % BAND.length]];
+    const mu = ((u % 4) + 4) % 4 - 1.5, mv = ((v % 4) + 4) % 4 - 1.5;               // small 4-tile diamonds inside each band
+    let k = (Math.max(Math.abs(mu), Math.abs(mv)) > 1 ? 0 : 1) + (band & 1);
+    const h = hash(col2 * 7 + 3, r * 13 + 1);
+    if (h < .1) k = Math.floor(hash(col2, r + 99) * 3);                              // hand-laid irregularity
+    let col = fam[k % 3];
+    if (h > .955) col = FAM[(BAND[band % BAND.length] + 1) % FAM.length][k % 3];
+    return col;
+  }
+  const isRim = (r, col2) => !nicheAt(r, col2) && [[0, 2], [0, -2], [1, 1], [1, -1], [-1, 1], [-1, -1]].some(([dr, dc]) => nicheAt(r + dr, col2 + dc));
+
+  // ─────────────────────────────────────────────────────────── materials
+  const lanternGlow = variant(M.M_window_glow, {});
+  const kemar = variant(M.M_lime_wall, { color: 0x8d2a22 });                        // maroon kemar band (keeps the lime texture)
+  const darkRecess = variant(M.M_steel_dark, { color: 0x1d1a18, metalness: .2 });   // inside of the outlet tunnels
+  const gradCanvas = document.createElement('canvas'); gradCanvas.width = 4; gradCanvas.height = 256;
+  { const g = gradCanvas.getContext('2d'), lg = g.createLinearGradient(0, 256, 0, 0);
+    lg.addColorStop(0, '#ffd9a0'); lg.addColorStop(.4, '#e89a4a'); lg.addColorStop(1, '#6a3818'); g.fillStyle = lg; g.fillRect(0, 0, 4, 256); }
+  // one lit material set per niche, so each temple can be switched on its own
+  const LIT = NICHES.map(n => ({
+    n, level: 0, vel: 0, target: 0, hover: 0,
+    mural: variant(M.M_timber_painted, { emissive: new THREE.Color(0xffc489), emissiveMap: M.M_timber_painted.map, emissiveIntensity: 0 }),
+    ceil: variant(M.M_timber_cedar, { emissive: new THREE.Color(0xffb062), emissiveIntensity: 0 }),
+    side: variant(M.M_lime_wall, { emissive: new THREE.Color(0xffa95c), emissiveIntensity: 0 }),
+    floor: variant(M.M_stone_masonry, { emissive: new THREE.Color(0xffb36b), emissiveIntensity: 0 }),
+    wall: variant(M.M_lime_wall, { emissive: new THREE.Color(0xffc68a), emissiveIntensity: 0 }),
+    gold: variant(M.M_gold, { emissive: new THREE.Color(0xff9a3a), emissiveIntensity: 0 }),
+    glow: variant(M.M_window_glow, {}),
+  }));
+
+  // ─────────────────────────────────────────────────────────── geometry helpers
+  const ni = g => g.index ? g.toNonIndexed() : g;
+  const bins = new Map();
+  const put = (key, g) => { if (!bins.has(key)) bins.set(key, []); bins.get(key).push(ni(g)); };
+  const flush = (key, mat, parent, name, { cast = true } = {}) => {
+    const list = bins.get(key); if (!list?.length) return null;
+    const m = new THREE.Mesh(mergeGeometries(list, false), mat); m.name = name; m.castShadow = cast; m.receiveShadow = true;
+    parent.add(m); bins.delete(key); return m;
+  };
+  const rbox = (w, h, d, r = .06, seg = 2, along = null) => metricUV(new RoundedBoxGeometry(w, h, d, seg, Math.min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3)), { along });
+  const bx = (w, h, d, along = null) => metricUV(new THREE.BoxGeometry(w, h, d), { along });
+  const at = (g, x, y, z, rz = 0, ry = 0, rx = 0) => { if (rx) g.rotateX(rx); if (rz) g.rotateZ(rz); if (ry) g.rotateY(ry); return g.translate(x, y, z); };
+  /** planar UVs in metres, projected along each face's dominant axis (for hulls and hand-made solids) */
+  function projUV(g) {
+    g = ni(g); if (!g.attributes.normal) g.computeVertexNormals();
+    const p = g.attributes.position, n = g.attributes.normal, uv = new Float32Array(p.count * 2);
+    for (let i = 0; i < p.count; i += 3) {
+      const nx = Math.abs(n.getX(i)), ny = Math.abs(n.getY(i)), nz = Math.abs(n.getZ(i));
+      for (let k = i; k < i + 3; k++) {
+        const x = p.getX(k), y = p.getY(k), z = p.getZ(k);
+        if (ny >= nx && ny >= nz) { uv[k * 2] = x; uv[k * 2 + 1] = z; } else if (nx >= nz) { uv[k * 2] = z; uv[k * 2 + 1] = y; } else { uv[k * 2] = x; uv[k * 2 + 1] = y; }
+      }
+    }
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); return g;
+  }
+  /** box with flat 45° chamfers on every edge (44 triangles): crisp joints that catch the low sun */
+  function chamferBox(w, h, d, c) {
+    const pts = [];
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) pts.push(
+      V(sx * (w / 2 - c), sy * h / 2, sz * (d / 2 - c)), V(sx * w / 2, sy * (h / 2 - c), sz * (d / 2 - c)), V(sx * (w / 2 - c), sy * (h / 2 - c), sz * d / 2));
+    return projUV(new ConvexGeometry(pts));
+  }
+  /** square-section frustum (hipped Bhutanese roof tier): base wb × db, top wt × dt, height h, centred on its mid-height */
+  function frustum(wb, db, wt, dt, h) {
+    const g = new THREE.BoxGeometry(1, 1, 1), p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const top = p.getY(i) > 0; p.setXYZ(i, p.getX(i) * (top ? wt : wb), p.getY(i) * h, p.getZ(i) * (top ? dt : db)); }
+    g.computeVertexNormals(); return projUV(g);
+  }
+  /** a quad facing +x/−x/+y/−y/+z, UVs in metres */
+  function quad(cx, cy, cz, w, h, face) {
+    const g = scaleUV(new THREE.PlaneGeometry(w, h), w, h);
+    if (face === 'px') g.rotateY(Math.PI / 2); else if (face === 'nx') g.rotateY(-Math.PI / 2);
+    else if (face === 'py') g.rotateX(-Math.PI / 2); else if (face === 'ny') g.rotateX(Math.PI / 2);
+    return g.translate(cx, cy, cz);
+  }
+  const lathe = (pts, seg = 20) => metricUV(new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg));
+
+  // ─────────────────────────────────────────────────────────── model groups (design.md §9.3)
+  const root = new THREE.Group(); root.name = 'gmc_obj_o2-temple-dam';
+  const G = n => { const g = new THREE.Group(); g.name = n; root.add(g); return g; };
+  const Lface = G('L_face'), Lstairs = G('L_stairs'), Lcav = G('L_niches'), Ltemple = G('L_temples'), Lcrest = G('L_crest'),
+        Lout = G('L_outlets'), Lglow = G('L_glow'), Lpeople = G('L_people');
+
+  // ─────────────────────────────────────────────────────────── 1 · the stepped textile face
+  // Every 6 × 3 m block is one pixel of the weave. Rows are offset by half a block (running bond), so the
+  // pattern's diamonds step diagonally, exactly as in the photographs. Blocks stand proud by 0–1.2 m at random:
+  // under the low sun that relief is what gives the face its texture.
+  const tiles = [];   // { r, col2, x, y, z, p, stair, col, niche }
+  const paths = [-138, -84, -36, 30, 66, 128, 0].map((x0, j) => ({ x0, ph: j * 1.7 + .4, amp: j === 6 ? 0 : 7 }));
+  for (let r = 0; r < NR; r++) {
+    const off = (r & 1) ? BW / 2 : 0, sp = span(r), stairsHere = new Set();
+    for (const pth of paths) {
+      if (pth.amp === 0 && (r >= NICHES[0].r0 - 1 && r <= NICHES[0].r1)) continue;      // the central stair stops at the main niche
+      const want = pth.x0 + Math.sin(r * .33 + pth.ph) * pth.amp, i = Math.round((want - off) / BW);
+      if (Math.abs(i * BW + off) + BW / 2 < sp - 6) stairsHere.add(i);
+    }
+    for (let i = -Math.ceil(sp / BW) - 1; i <= Math.ceil(sp / BW) + 1; i++) {
+      const x = i * BW + off; if (Math.abs(x) - BW / 2 > sp) continue;
+      const col2 = 2 * i + (r & 1);
+      if (nicheAt(r, col2)) continue;
+      const stair = stairsHere.has(i) && !isRim(r, col2);
+      const h = hash(col2 * 31 + 5, r * 17 + 3);
+      const p = stair ? 0 : [0, 0, .4, .4, .8, 1.2][Math.floor(h * 6)];
+      tiles.push({ r, col2, x, y: r * RH + RH / 2, z: zF(r), p, stair, col: isRim(r, col2) ? 0xf3e6d2 : tileColour(r, col2) });
+    }
+  }
+  const blockGeo = chamferBox(BW - GAP, RH, BD, .14);
+  // stair block: two chamfered cheeks + 8 steps (0.375 m rise, 0.3 m going) climbing the riser to the next tread
+  const stairGeo = (() => {
+    const parts = [], cw = 1.0, sw = BW - GAP - 2 * cw;
+    for (const sx of [-1, 1]) parts.push(chamferBox(cw, RH, BD, .1).translate(sx * (BW - GAP - cw) / 2, 0, 0));
+    for (let k = 0; k < 8; k++) {
+      const top = (k + 1) * RH / 8, z1 = BD / 2 - k * .3, z0 = k === 7 ? -BD / 2 : BD / 2 - (k + 1) * .3;
+      parts.push(projUV(new THREE.BoxGeometry(sw, top, z1 - z0).translate(0, -RH / 2 + top / 2, (z0 + z1) / 2)));
+    }
+    return mergeGeometries(parts, false);
+  })();
+  const blocks = tiles.filter(t => !t.stair), stairs = tiles.filter(t => t.stair);
+  const tileMeshes = [];
+  function instanced(geo, list, name, parent) {
+    const m = new THREE.InstancedMesh(geo, M.M_textile_block, list.length); m.name = name; m.castShadow = m.receiveShadow = true;
+    const d = new THREE.Object3D(), c = new THREE.Color();
+    list.forEach((t, i) => {
+      t.mesh = m; t.index = i;
+      const depth = BD + t.p; d.position.set(t.x, t.y, t.z + t.p - depth / 2); d.scale.set(1, 1, depth / BD); d.updateMatrix();
+      t.matrix = d.matrix.clone(); m.setMatrixAt(i, d.matrix);
+      // ±5 % tone per block: glaze batches never match exactly
+      t.base = c.set(t.col).multiplyScalar(.95 + hash(t.col2, t.r + 5) * .1).clone();
+      m.setColorAt(i, t.base);
+    });
+    m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; parent.add(m); tileMeshes.push(m); return m;
+  }
+  instanced(blockGeo, blocks, 'textile_blocks', Lface);
+  instanced(stairGeo, stairs, 'stair_blocks', Lstairs);
+  // lanterns on the stair cheeks (the climbing routes glow at dusk)
+  { const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(.32, .42, .32), lanternGlow, stairs.length * 2); inst.name = 'stair_lanterns';
+    const d = new THREE.Object3D();
+    stairs.forEach((t, i) => { for (const sx of [-1, 1]) { d.position.set(t.x + sx * (BW - GAP - 1) / 2, t.y + RH / 2 + .21, t.z - .5); d.updateMatrix(); inst.setMatrixAt(i * 2 + (sx > 0 ? 1 : 0), d.matrix); } });
+    inst.castShadow = false; Lglow.add(inst); }
+  lap(`face: ${blocks.length} blocks, ${stairs.length} stair blocks`);
+
+  // ─────────────────────────────────────────────────────────── 2 · niche cavities
+  // The opening is the union of per-row rectangles. Each row contributes: back wall, side walls, a floor where the
+  // row below is closed and a ceiling where the row above is closed. Floors sit 3 cm low and ceilings 3 cm high,
+  // so they never share a plane with the blocks they meet.
+  for (const n of NICHES) {
+    const L = LIT[n.id], key = s => s + n.id;
+    for (let r = n.r0; r <= n.r1; r++) {
+      const w = W(n, r), y0 = r * RH, zf = zF(r), zb = n.zBack, d = zf - zb, below = r > n.r0 ? W(n, r - 1) : 0, above = r < n.r1 ? W(n, r + 1) : 0;
+      put(key('mural'), quad(n.x, y0 + RH / 2, zb, 2 * w, RH, 'pz'));
+      put(key('side'), quad(n.x - w + .02, y0 + RH / 2, zb + d / 2, d, RH, 'px'));
+      put(key('side'), quad(n.x + w - .02, y0 + RH / 2, zb + d / 2, d, RH, 'nx'));
+      if (below === 0) put(key('floor'), quad(n.x, y0 - .03, zb + d / 2, 2 * w, d, 'py'));
+      else if (w > below) for (const sx of [-1, 1]) put(key('floor'), quad(n.x + sx * (below + w) / 2, y0 - .03, zb + d / 2, w - below, d, 'py'));
+      const dc = (r < n.r1 ? zF(r + 1) : zf) - zb;
+      if (above === 0) put(key('ceil'), quad(n.x, y0 + RH + .03, zb + dc / 2, 2 * w, dc, 'ny'));
+      else if (w > above) for (const sx of [-1, 1]) put(key('ceil'), quad(n.x + sx * (above + w) / 2, y0 + RH + .03, zb + dc / 2, w - above, dc, 'ny'));
+      // timber ceiling battens under each closed span (warm slatted soffit, like the reference interior)
+      if (above < w) for (let z = zb + .6; z < zb + dc - .3; z += .9) {
+        if (above === 0) put(key('bat'), at(bx(2 * w - .1, .22, .14, 'x'), n.x, y0 + RH - .1, z));
+        else for (const sx of [-1, 1]) put(key('bat'), at(bx(w - above, .22, .14, 'x'), n.x + sx * (above + w) / 2, y0 + RH - .1, z));
+      }
+    }
+    flush(key('mural'), L.mural, Lcav, `niche${n.id}_mural`); flush(key('side'), L.side, Lcav, `niche${n.id}_walls`);
+    flush(key('floor'), L.floor, Lcav, `niche${n.id}_floors`); flush(key('ceil'), L.ceil, Lcav, `niche${n.id}_soffit`);
+    flush(key('bat'), L.ceil, Lcav, `niche${n.id}_battens`);
+  }
+
+  // ─────────────────────────────────────────────────────────── 3 · temples (lhakhang: battered lime walls, kemar band,
+  // stacked bracket cornice, two gold roof tiers with a lantern clerestory between, gold sertog finial, rabsel windows)
+  function temple(cx, yb, cz, s, L, { wings = true, keyp = 't' } = {}) {
+    const K = s_ => keyp + s_, wW = 22 * s, wH = 7.4 * s, wD = 10 * s;
+    const hall = (x, w, h, d, roofs) => {
+      put(K('base'), at(rbox(w + .7 * s, 1.1 * s, d + .7 * s, .12 * s, 2), x, yb + .55 * s, cz));
+      put(K('wall'), at(frustum(w, d, w - .35 * s, d - .35 * s, h), x, yb + h / 2, cz));           // ~2° batter
+      put(K('kemar'), at(rbox(w + .1 * s, 1.0 * s, d + .1 * s, .06 * s, 1), x, yb + h - .5 * s, cz));
+      for (let k = 0; k < 3; k++) put(K('brk'), at(rbox(w + (.6 + k * .55) * s, .26 * s, d + (.6 + k * .55) * s, .05 * s, 1), x, yb + h + (.13 + k * .28) * s, cz));
+      const r1 = yb + h + .84 * s;
+      put(K('gold'), at(frustum(w + 7 * s, d + 6 * s, w - 4 * s, d - 2 * s, 2.0 * s), x, r1 + 1.0 * s, cz));
+      put(K('roofU'), at(rbox(w + 7.1 * s, .18 * s, d + 6.1 * s, .05 * s, 1), x, r1 + .05 * s, cz));               // roof eave board
+      if (roofs > 1) {
+        const r2 = r1 + 2.0 * s;
+        put(K('dark'), at(rbox(10 * s, 1.8 * s, 5 * s, .05 * s, 1), x, r2 + .9 * s, cz));                          // jabtho clerestory
+        put(K('glow'), at(new THREE.PlaneGeometry(8.6 * s, .9 * s), x, r2 + .95 * s, cz + 2.52 * s));
+        for (let i = -4; i <= 4; i++) put(K('dark'), at(bx(.2 * s, 1.8 * s, .2 * s), x + i * 1.05 * s, r2 + .9 * s, cz + 2.6 * s));
+        put(K('gold'), at(frustum(15 * s, 9 * s, 5 * s, 2.4 * s, 2.2 * s), x, r2 + 1.8 * s + 1.1 * s, cz));
+        const r3 = r2 + 1.8 * s + 2.2 * s;
+        put(K('gold'), at(lathe([[0, 0], [1.1, 0], [1.1, .3], [.55, .5], [.75, .9], [.75, 1.3], [.4, 1.5], [.55, 1.9], [.3, 2.3], [.12, 2.9], [0, 3.3]].map(([a, b]) => [a * s, b * s])), x, r3, cz));
+      }
+      // rabsel windows: painted timber frames with a lit pane, two storeys on the front, one on each side
+      const storeys = h > 6 * s ? 2 : 1;
+      const cols = Math.max(1, Math.floor((w - 2 * s) / (4.2 * s)));
+      for (let j = 0; j < storeys; j++) for (let i = -(cols - 1) / 2; i <= (cols - 1) / 2 + 1e-6; i++) {
+        if (j === 0 && roofs > 1 && Math.abs(i * 4.2) < 3.6) continue;     // keep the ground floor clear around the door
+        const wx = x + i * 4.2 * s, wy = yb + (2.5 + j * 3.1) * s, wz = cz + d / 2 - .1 * s;
+        put(K('frame'), at(rbox(2.4 * s, 2.1 * s, .55 * s, .05 * s, 1), wx, wy, wz));
+        put(K('glow'), at(new THREE.PlaneGeometry(1.8 * s, 1.5 * s), wx, wy, wz + .29 * s));
+        put(K('frame'), at(bx(1.8 * s, .12 * s, .1 * s), wx, wy, wz + .32 * s)); put(K('frame'), at(bx(.12 * s, 1.5 * s, .1 * s), wx, wy, wz + .32 * s));
+      }
+      for (const sx of [-1, 1]) for (const dz of [-d / 4, d / 4]) {
+        const wx = x + sx * (w / 2 - .1 * s), wy = yb + 2.6 * s;
+        put(K('frame'), at(rbox(.55 * s, 2.1 * s, 2.4 * s, .05 * s, 1), wx, wy, cz + dz));
+        put(K('glow'), at(new THREE.PlaneGeometry(1.8 * s, 1.5 * s), wx + sx * .29 * s, wy, cz + dz, 0, sx * Math.PI / 2));
+      }
+      if (roofs > 1) {   // main door
+        put(K('frame'), at(rbox(3.4 * s, 3.8 * s, .6 * s, .06 * s, 1), x, yb + 1.9 * s, cz + d / 2));
+        put(K('glow'), at(new THREE.PlaneGeometry(2.4 * s, 3.1 * s), x, yb + 1.6 * s, cz + d / 2 + .31 * s));
+      }
+    };
+    hall(cx, wW, wH, wD, 2);
+    if (wings) for (const sx of [-1, 1]) hall(cx + sx * 17.5 * s, 12 * s, 5 * s, 8 * s, 1);
+  }
+  const templeMats = (keyp, L, parent, label) => {
+    flush(keyp + 'base', M.M_stone_masonry, parent, label + '_base'); flush(keyp + 'wall', L ? L.wall : M.M_lime_wall, parent, label + '_walls');
+    flush(keyp + 'kemar', kemar, parent, label + '_kemar'); flush(keyp + 'brk', M.M_timber_painted, parent, label + '_bracket_cornice');
+    flush(keyp + 'gold', L ? L.gold : M.M_gold, parent, label + '_gold_roofs'); flush(keyp + 'roofU', M.M_timber_dark, parent, label + '_eaves');
+    flush(keyp + 'dark', M.M_timber_dark, parent, label + '_clerestory'); flush(keyp + 'frame', M.M_timber_painted, parent, label + '_rabsel_frames');
+    flush(keyp + 'glow', L ? L.glow : M.M_window_glow, Lglow, label + '_windows', { cast: false });
+  };
+  // main niche: stone platform from the opening's floor, a grand stair, the temple and two wings, butter lamps
+  { const n = NICHES[0], L = LIT[0], y0 = n.r0 * RH, top = y0 + 6.6, pf = 41.8;
+    put('plat0', at(rbox(34, top - y0, pf - n.zBack, .12, 2), n.x, (y0 + top) / 2, (n.zBack + pf) / 2));
+    for (let k = 0; k < 11; k++) put('plat0', at(rbox(9, (k + 1) * .6, .42, .03, 1), n.x, y0 + (k + 1) * .3, pf + 4.4 - k * .4 - .21));
+    for (const sx of [-1, 1]) put('plat0', at(rbox(.8, 1.1, 4.6, .06, 1), n.x + sx * 4.9, top - 1.4, pf + 2.2));
+    flush('plat0', L.floor, Ltemple, 'niche0_platform');
+    temple(n.x, top, 24, n.s, L, { wings: true, keyp: 'm' }); templeMats('m', L, Ltemple, 'temple_main');
+    n.lamps = [];
+    for (let x = -15.5; x <= 15.5; x += 1.1) if (Math.abs(x) > 4.8) n.lamps.push([x, top, pf - .5]);
+    for (let r = n.r0 + 2; r <= n.rc; r++) { const w = W(n, r), b = W(n, r - 1); for (const sx of [-1, 1]) for (let x = b + .8; x < w - .6; x += 1.4) n.lamps.push([n.x + sx * x, r * RH, zF(r) - 3.6]); }
+  }
+  // upper shrine
+  { const n = NICHES[1], L = LIT[1], y0 = n.r0 * RH, top = y0 + 3.4, pf = zF(n.r0) - BD - .4;
+    put('plat1', at(rbox(16, top - y0, pf - n.zBack, .1, 2), n.x, (y0 + top) / 2, (n.zBack + pf) / 2));
+    for (let k = 0; k < 6; k++) put('plat1', at(rbox(4, (k + 1) * .567, .36, .03, 1), n.x, y0 + (k + 1) * .283, pf + 2.1 - k * .36 - .18));
+    flush('plat1', L.floor, Ltemple, 'niche1_platform');
+    temple(n.x, top, n.zBack + 5.5, n.s, L, { wings: false, keyp: 's' }); templeMats('s', L, Ltemple, 'temple_upper');
+    n.lamps = []; for (let x = -7.4; x <= 7.4; x += 1.0) if (Math.abs(x) > 2.2) n.lamps.push([n.x + x, top, pf - .4]);
+  }
+  for (const n of NICHES) {
+    const inst = new THREE.InstancedMesh(new THREE.CylinderGeometry(.13, .16, .32, 8).translate(0, .16, 0), LIT[n.id].glow, n.lamps.length);
+    inst.name = `butter_lamps_${n.id}`; inst.castShadow = false;
+    const d = new THREE.Object3D(); n.lamps.forEach(([x, y, z], i) => { d.position.set(x, y, z); d.updateMatrix(); inst.setMatrixAt(i, d.matrix); }); Lglow.add(inst);
+  }
+  lap('niches + temples');
+
+  // ─────────────────────────────────────────────────────────── 4 · crest (road, parapets, lamps, gate shrines)
+  { const hx = hw(H) + 4, zb = -14;
+    put('crest', at(rbox(2 * hx, 20.4, -zb, .2, 2, 'x'), 0, H + .4 - 10.2, zb / 2));
+    put('para', at(rbox(2 * hx - 8, 1.1, .6, .08, 2, 'x'), 0, H + .55, 1.1));
+    put('para', at(rbox(2 * hx, 1.2, .6, .08, 2, 'x'), 0, H + 1, zb + .3));
+    for (const z of [-1.2, zb + 1.4]) put('kerb', at(rbox(2 * hx - 10, .25, .4, .05, 1, 'x'), 0, H + .52, z));
+    for (let x = -hx + 12; x < hx - 10; x += 18) {
+      put('post', at(new THREE.CylinderGeometry(.11, .14, 5.2, 10), x, H + .4 + 2.6, zb + 1.1));
+      put('post', at(rbox(.5, .14, 1.4, .04, 1), x, H + .4 + 5.25, zb + 1.6));
+      put('cglow', at(new THREE.PlaneGeometry(.4, 1.2), x, H + .4 + 5.17, zb + 1.6, 0, 0, Math.PI / 2));
+    }
+    flush('crest', M.M_stone_masonry, Lcrest, 'crest_deck'); flush('para', M.M_lime_wall, Lcrest, 'parapets');
+    flush('kerb', M.M_stone_masonry, Lcrest, 'kerbs'); flush('post', M.M_steel_dark, Lcrest, 'lamp_posts');
+    flush('cglow', M.M_window_glow, Lglow, 'crest_lights', { cast: false });
+    for (const sx of [-1, 1]) temple(sx * (hx - 24), H + .4, zb / 2 - .5, .3, null, { wings: false, keyp: 'g' });
+    templeMats('g', null, Lcrest, 'gate_shrines');
+  }
+
+  // ─────────────────────────────────────────────────────────── 5 · outlets at the toe (sluice gates that lift)
+  const OUT = [-10, 10].map(x => ({ x }));
+  { for (const o of OUT) {
+      put('portal', at(rbox(8.6, 7.4, 3.2, .2, 2), o.x, 3.7, zF(0) + 1.3));
+      put('recess', at(bx(5.6, 4.6, .1), o.x, 2.6, zF(0) + 2.98));
+      for (let k = 0; k < 4; k++) put('portal', at(rbox(9.2 - k * .3, .3, 3.4, .05, 1), o.x, 7.5 + k * .3, zF(0) + 1.3));
+    }
+    for (const sx of [-1, 1]) put('wing', at(rbox(1.6, 6, 40, .1, 2, 'z'), sx * 23, 1, zF(0) + 20));
+    flush('portal', M.M_stone_masonry, Lout, 'outlet_portals'); flush('recess', darkRecess, Lout, 'outlet_tunnels');
+    flush('wing', M.M_stone_masonry, Lout, 'training_walls');
+    const gateGeo = metricUV(new RoundedBoxGeometry(5.8, 4.8, .5, 2, .06));
+    for (const o of OUT) { o.gate = new THREE.Mesh(gateGeo, M.M_steel_dark); o.gate.name = 'sluice_gate'; o.gate.position.set(o.x, 2.6, zF(0) + 3.05); o.gate.castShadow = true; Lout.add(o.gate);
+      for (let k = -2; k <= 2; k++) { const rib = new THREE.Mesh(metricUV(new THREE.BoxGeometry(.18, 4.6, .2)), M.M_steel_dark); rib.position.set(k * 1.1, 0, .3); o.gate.add(rib); } }
+  }
+
+  // ─────────────────────────────────────────────────────────── 6 · people (silhouettes on treads, stairs, crest, niches)
+  { // kit people (1.7.0): pilgrims climbing the stairs, visitors resting on the terraces facing the valley,
+    // walkers on the crest, monks seated in the temple niche. Forest-LOD bodies keep the dam in budget.
+    const list = [];
+    for (const t of stairs) for (let k = 0; k < 2; k++) if (rnd() < .5) list.push({ x: t.x + (rnd() - .5) * 3, y: t.y + RH / 2, z: t.z - TR + .3 + rnd() * 1.6, pose: 'walk', yaw: rnd() < .7 ? Math.PI : 0 });
+    for (let i = 0; i < 70; i++) { const t = tiles[Math.floor(rnd() * tiles.length)]; if (t.r < NR - 1) { const sit = rnd() < .4;
+      list.push({ x: t.x + (rnd() - .5) * 4, y: t.y + RH / 2, z: t.z - TR + .4 + rnd() * 1.4, pose: sit ? 'sit' : rnd() < .5 ? 'stand' : 'talk', yaw: sit ? (rnd() - .5) * .6 : undefined }); } }
+    for (let i = 0; i < 60; i++) list.push({ x: (rnd() - .5) * 2 * (hw(H) - 20), y: H + .4, z: -3 - rnd() * 8, pose: rnd() < .55 ? 'walk' : rnd() < .25 ? 'pray' : 'stand', yaw: rnd() < .5 ? Math.PI / 2 : -Math.PI / 2 });
+    for (let i = 0; i < 14; i++) { const monk = rnd() < .6;
+      list.push({ x: (rnd() - .5) * 26, y: NICHES[0].r0 * RH + 6.6, z: 31 + rnd() * 9, pose: monk ? 'sit' : 'pray', outfit: monk ? 'robe' : undefined, yaw: (rnd() - .5) * .5 }); }
+    Lpeople.add(createPeople(M, list, { name: 'people', lod: 2, seed: 23 })); }   // ~300 figures seen from hundreds of metres: far LOD
+  lap('crest, outlets, people');
+
+  // ─────────────────────────────────────────────────────────── 7 · PREVIEW CONTEXT (not part of the model)
+  // gorge terrain + skirt, forest, reservoir and river. On the map these come from M1 terrain and the E-kits.
+  const context = new THREE.Group(); context.name = '__context_preview_only';
+  const X0 = -330, X1 = 330, Z0 = -300, Z1 = 380, WL_RES = H - 4, WL_RIV = 1.0;
+  const vnoise = (() => { const P = new Uint8Array(512), Gr = new Float32Array(256); const rr = (() => { let a = 99; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; }; })();
+    const p = [...Array(256).keys()]; for (let i = 255; i > 0; i--) { const j = Math.floor(rr() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } for (let i = 0; i < 512; i++) P[i] = p[i & 255]; for (let i = 0; i < 256; i++) Gr[i] = rr() * 2 - 1;
+    const n = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, X = xi & 255, Y = yi & 255; const a = Gr[P[X + P[Y]]], b = Gr[P[X + 1 + P[Y]]], c = Gr[P[X + P[Y + 1]]], d = Gr[P[X + 1 + P[Y + 1]]]; const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
+    return (x, y, o = 4) => { let s = 0, a = .5, f = 1; for (let i = 0; i < o; i++) { s += a * n(x * f, y * f); f *= 2.03; a *= .5; } return s; }; })();
+  const valleyX = z => z > 100 ? 26 * Math.sin((z - 100) / 90) : 0;
+  function terrainY(x, z) {
+    const widen = 1 + Math.max(0, z - 100) / 380 + Math.max(0, -z - 40) / 900, ax = Math.abs(x - valleyX(z)) / widen;
+    let y = ax <= 18 ? -3 + 3 * (ax / 18) ** 2 : H * Math.pow((ax - 18) / 152, 1 / 1.1);
+    const rough = vnoise(x / 70, z / 70, 4) * 16 + vnoise(x / 20 + 9, z / 20, 2) * 4;
+    const bank = clamp((ax - 24) / 30, 0, 1), damZone = z > -22 && z < 104;
+    y += (damZone ? Math.abs(rough) : rough) * bank;          // near the dam the rock only bulges outward, so it always covers the row ends
+    return Math.min(y, 250 + vnoise(x / 40, z / 40) * 20);
+  }
+  { // terrain heightfield, UVs in metres
+    const nx = 220, nz = 226, pos = [], uv = [], idx = [];
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = X0 + (X1 - X0) * i / nx, z = Z0 + (Z1 - Z0) * j / nz; pos.push(x, terrainY(x, z), z); uv.push(x, -z); }
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+    wetBanks(g, WL_RIV, { band: 1.2, dark: .6 });                                // river banks darken at the waterline
+    const m = new THREE.Mesh(g, variant(M.M_terrain, { color: 0x7d8a6a, vertexColors: true })); m.name = 'gorge_terrain';   // forest floor: darker than open meadow
+    m.receiveShadow = true; m.castShadow = true; context.add(m);
+    const outline = []; for (let x = X0; x < X1; x += 5) outline.push(new THREE.Vector2(x, Z1)); for (let z = Z1; z > Z0; z -= 5) outline.push(new THREE.Vector2(X1, z));
+    for (let x = X1; x > X0; x -= 5) outline.push(new THREE.Vector2(x, Z0)); for (let z = Z0; z < Z1; z += 5) outline.push(new THREE.Vector2(X0, z));
+    // v02: no strata skirt (the map surround continues past the edge)
+  }
+  const waterCut = variant(M.M_water, { color: 0x1d3c45, roughness: .3, side: THREE.DoubleSide });
+  // kit water surfaces: depth colour, foam lines at the banks, drifting ripples
+  // reservoir: deep, calm, darker and mirror-like · river: flows south down the meandering gorge (follows valleyX)
+  const res = createWaterSurface(M, { x0: X0, x1: X1, z0: Z0, z1: -14.5, level: WL_RES, groundAt: terrainY, res: 3, deep: 14, name: 'reservoir', flow: [.3, 1], speed: .08, chop: .45, clarity: .55 });
+  const riv = createWaterSurface(M, { x0: X0, x1: X1, z0: 60, z1: Z1, level: WL_RIV, groundAt: terrainY, res: 1.8, deep: 3, name: 'river',
+    flowAt: (x, z) => [z > 100 ? 26 / 90 * Math.cos((z - 100) / 90) : 0, 1], speed: 1.1, chop: 1.2, clarity: 1 });
+  { context.add(res, riv);
+    // cut faces of the water bodies at the slab edge (the diorama section)
+    const cut = (z, level, face) => { const pos = [], idx = []; let n = 0;
+      for (let x = X0; x <= X1; x += 2.5) { const t = Math.min(terrainY(x, z), level); pos.push(x, level, z, x, t, z); if (n) { const a = (n - 1) * 2; idx.push(...(face > 0 ? [a, a + 1, a + 2, a + 1, a + 3, a + 2] : [a, a + 2, a + 1, a + 1, a + 2, a + 3])); } n++; }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+      const m = new THREE.Mesh(g, waterCut); m.name = 'water_section'; context.add(m); };
+    cut(Z1, WL_RIV, 1); cut(Z0, WL_RES, -1);
+  }
+  { // forest: kit trees on the slopes (kept off the water, the face and the crest). Subtropical broadleaf and sal
+    // low down, chir pine on the drier middle slopes, blue pine on the high ridges (design.md E1)
+    const trees = [];
+    for (let tries = 0; trees.length < 0 && tries < 120000; tries++) {
+      const x = X0 + 4 + rnd() * (X1 - X0 - 8), z = Z0 + 4 + rnd() * (Z1 - Z0 - 8), y = terrainY(x, z);
+      if (z < -14 && y < WL_RES + 2) continue; if (z > 60 && y < WL_RIV + 3) continue;
+      if (z > -18 && z < 100 && y < (zF(0) - z) / TR * RH + 5 && Math.abs(x) < hw(y) + 6) continue;   // inside the dam's own volume
+      if (z > -22 && z < 8 && y > H - 6 && Math.abs(x) < hw(H) + 14) continue;                   // crest road ends
+      const hi = clamp(y / 230, 0, 1), u = rnd() + (rnd() - .5) * .25;
+      const species = u < .55 - hi * .5 ? 'broadleaf' : u < .75 - hi * .45 ? 'sal' : u < .95 - hi * .3 ? 'chirPine' : 'bluePine';
+      trees.push({ x, y, z, species, height: { broadleaf: 12, sal: 16, chirPine: 15, bluePine: 13 }[species] * (.8 + rnd() * .45) });
+    }
+    // bank shrubs along the river
+    for (let tries = 0, n = 0; n < 260 && tries < 9000; tries++) { const z = 70 + rnd() * (Z1 - 75), x = valleyX(z) + (rnd() < .5 ? -1 : 1) * (20 + rnd() * 18), y = terrainY(x, z); if (y < WL_RIV + .4 || y > WL_RIV + 9) continue;
+      trees.push({ x, y, z, species: 'shrub', height: 2 + rnd() * 2 }); n++; }
+    // full-detail trees around the west abutment (the STEPS view), the rest at forest LOD.
+    // Trees receive but don't cast: at 18° sun their shadows streak across the face and read as dirt.
+    // v02: no forest (map environment)
+    const rocks = [];
+    for (let tries = 0; rocks.length < 200 && tries < 12000; tries++) { const z = 100 + rnd() * (Z1 - 106), x = valleyX(z) + (rnd() < .5 ? -1 : 1) * (8 + rnd() * 22), y = terrainY(x, z); if (y < WL_RIV - 1.2 || y > WL_RIV + 5) continue;
+      rocks.push({ x, y: Math.max(y, WL_RIV - .5), z, size: rnd() < .25 ? 1.8 + rnd() * 2.6 : .5 + rnd() * 1.1 }); }
+    context.add(createRocks(M, rocks, { name: 'river_boulders' }));
+    addWaterObstacles(riv, rocks.filter(o => o.y < WL_RIV + .4).map(o => ({ x: o.x, z: o.z, r: o.size * .9 })));   // foam rings + wakes behind boulders
+    // riverside planting: reeds at the water's edge, broad-leaf plants on the lower banks
+    const reeds = [], leaves = [];
+    for (let tries = 0; reeds.length < 320 && tries < 30000; tries++) { const z = 64 + rnd() * (Z1 - 68), x = valleyX(z) + (rnd() - .5) * 70, y = terrainY(x, z);
+      if (y < WL_RIV - .12 || y > WL_RIV + .35) continue; reeds.push({ x, y: Math.max(y, WL_RIV - .05), z, s: .9 + rnd() * .5 }); }
+    for (let tries = 0; leaves.length < 110 && tries < 20000; tries++) { const z = 64 + rnd() * (Z1 - 68), x = valleyX(z) + (rnd() - .5) * 80, y = terrainY(x, z);
+      if (y < WL_RIV + .4 || y > WL_RIV + 3) continue; leaves.push({ x, y, z, s: 1.1 + rnd() * .6 }); }
+    // v02: no riverside planting
+  }
+  // water release FX (preview animation, not exported): jets from the outlets, foam, spray
+  const foamCanvas = document.createElement('canvas'); foamCanvas.width = 64; foamCanvas.height = 256;
+  { const g = foamCanvas.getContext('2d'), im = g.createImageData(64, 256);
+    for (let y = 0; y < 256; y++) for (let x = 0; x < 64; x++) { const v = .5 + .5 * Math.sin(x / 64 * Math.PI * 6 + Math.sin(y / 256 * Math.PI * 8) * 2 + vnoise(x / 6, y / 14) * 4), w = clamp(.55 + v * .45 + vnoise(x / 3, y / 5) * .4, 0, 1) * 255, i = (y * 64 + x) * 4;
+      im.data[i] = w; im.data[i + 1] = w; im.data[i + 2] = w; im.data[i + 3] = 255; }
+    g.putImageData(im, 0, 0); }
+  const foamTex = new THREE.CanvasTexture(foamCanvas); foamTex.colorSpace = THREE.SRGBColorSpace; foamTex.wrapS = foamTex.wrapT = THREE.RepeatWrapping; foamTex.repeat.set(2, 3);
+  const jetMat = variant(M.M_water, { color: 0xcfe4ea, map: foamTex, roughness: .35, transparent: true, opacity: 0, depthWrite: false });
+  const softCanvas = document.createElement('canvas'); softCanvas.width = softCanvas.height = 64;
+  { const g = softCanvas.getContext('2d'), rg = g.createRadialGradient(32, 32, 0, 32, 32, 32); rg.addColorStop(0, '#fff'); rg.addColorStop(.45, 'rgba(255,255,255,.75)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rg; g.fillRect(0, 0, 64, 64); }
+  const softTex = new THREE.CanvasTexture(softCanvas);   // soft round droplet (colour map with alpha) for the spray
+  const greyCanvas = document.createElement('canvas'); greyCanvas.width = greyCanvas.height = 64;
+  { const g = greyCanvas.getContext('2d'), rg = g.createRadialGradient(32, 32, 0, 32, 32, 32); rg.addColorStop(0, '#fff'); rg.addColorStop(.5, '#bbb'); rg.addColorStop(1, '#000'); g.fillStyle = rg; g.fillRect(0, 0, 64, 64); }
+  const greyTex = new THREE.CanvasTexture(greyCanvas);   // alphaMaps read the green channel, so the falloff is encoded as grey
+  const foamMat = new THREE.MeshBasicMaterial({ name: 'fx_foam', map: foamTex, alphaMap: greyTex, color: 0xdfeef2, transparent: true, opacity: 0, depthWrite: false });
+  const fx = new THREE.Group(); fx.name = '__fx_preview_only'; context.add(fx);
+  for (const o of OUT) {
+    const a = V(o.x, 2.6, zF(0) + 3.1), c = V(o.x, 3.4, zF(0) + 15), b = V(o.x, WL_RIV, zF(0) + 30);
+    o.jet = new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(a, c, b), 40, 1.9, 16, false), jetMat); o.jet.scale.set(1, 1, 1); o.jet.visible = false; fx.add(o.jet);
+    o.foam = new THREE.Mesh(new THREE.CircleGeometry(15, 40).scale(.8, 1.3, 1).rotateX(-Math.PI / 2), foamMat); o.foam.position.set(o.x * 1.2, WL_RIV + .08, zF(0) + 31); o.foam.visible = false; fx.add(o.foam);
+  }
+  const NSP = 900, spPos = new Float32Array(NSP * 3), spVel = new Float32Array(NSP * 3), spLife = new Float32Array(NSP);
+  const spray = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(spPos, 3)),
+    new THREE.PointsMaterial({ name: 'fx_spray', color: 0xe8f2f5, map: softTex, size: 1.6, transparent: true, opacity: .5, depthWrite: false, sizeAttenuation: true }));
+  spray.frustumCulled = false; spray.visible = false; fx.add(spray); spLife.fill(-1);
+  // invisible hit volumes for the niches (picking only)
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  for (const n of NICHES) { const wmax = W(n, n.rc), zf = zF(n.r1) - BD - .2, h = new THREE.Mesh(new THREE.BoxGeometry(2 * wmax, (n.r1 - n.r0 + 1) * RH, zf - n.zBack), hitMat);
+    h.position.set(n.x, (n.r0 * RH + (n.r1 + 1) * RH) / 2, (zf + n.zBack) / 2);
+    h.userData.niche = n; n.hit = h; fx.add(h); }   // behind every block shell: tiles in front win the pick
+  lap('context built');
+
+  const MAPENV_P = { X0, X1, Z0, Z1, E: 900, ST: 12, fall: .9, bump: 1.2, lights: 260, ground: ['gorge_terrain'],
+      floor: (x, z) => z <= Z0 + 1 ? WL_RES + .3 : WL_RIV + .3,                                  // reservoir / river shores close the water at the plinth edge
+      keepOut: (x, z) => Math.abs(x) < 260 && z > -60 && z < 200 };
+
+  // ─────────────────────────────────────────────────────────── v02 · masterplan-map environment (as airport v03)
+  // Dark-teal ground with a faint block texture, a surround that runs on past the plinth edge and dissolves into a
+  // teal void, scattered tiny lights. Vegetation and the plinth's strata skirt are not built.
+  const MAP_BG = new THREE.Color(0x0f2a2d);
+  { const P = MAPENV_P, sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const U = { uBg: { value: MAP_BG } };
+    const VERT_HEAD = ['#include <common>', 'varying vec3 vPW; varying float vMist;', '#ifdef MAP_MIST', 'attribute float mist;', '#endif'].join('\n');
+    const VERT_POS = ['#include <worldpos_vertex>', 'vec4 mpw = vec4(transformed, 1.);', '#ifdef USE_INSTANCING', 'mpw = instanceMatrix * mpw;', '#endif',
+      'vPW = (modelMatrix * mpw).xyz;', '#ifdef MAP_MIST', 'vMist = mist;', '#else', 'vMist = 0.;', '#endif'].join('\n');
+    const FRAG_HEAD = ['#include <common>', 'uniform vec3 uBg; varying vec3 vPW; varying float vMist;',
+      'float mH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }'].join('\n');
+    const FRAG_COL = ['#include <color_fragment>',
+      '{ vec2 bq = vPW.xz / vec2(11., 7.); bq.x += step(1., mod(floor(bq.y), 2.)) * .5;',             // map blocks (staggered)
+      '  vec2 bc = floor(bq), bf = fract(bq); float lit = .84 + .3 * mH(bc + 13.7);',
+      '  lit *= mix(1., .82, clamp(step(bf.x, .07) + step(bf.y, .09), 0., 1.)) * mix(1., 1.08, step(.92, bf.y));',
+      '  lit *= .88 + .24 * mH(floor(vPW.xz / vec2(37., 23.) + 3.3)); diffuseColor.rgb *= lit; }'].join('\n');
+    const FRAG_END = ['gl_FragColor.rgb = mix(gl_FragColor.rgb, uBg, clamp(vMist, 0., 1.));', '#include <dithering_fragment>'].join('\n');
+    const groundMat = (hex, mist = false) => {
+      const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(hex).multiplyScalar(.38), roughness: .95, metalness: 0 });
+      m.name = 'M_map_ground'; m.userData.clay = m; if (mist) m.defines = { MAP_MIST: 1 };
+      m.customProgramCacheKey = () => 'mapground' + mist;
+      m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U);
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', VERT_HEAD).replace('#include <worldpos_vertex>', VERT_POS);
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', FRAG_HEAD).replace('#include <color_fragment>', FRAG_COL).replace('#include <dithering_fragment>', FRAG_END); };
+      return m; };
+    const G = groundMat(0x2a7f8f), GB = groundMat(0x2f8592), GR = groundMat(0x3d8a94);
+    // plinth ground + boulders → map ground; the water's cut faces at the plinth edge are hidden (the surround closes it)
+    for (const n of P.ground) { const o = context.getObjectByName(n); if (o) o.material = Array.isArray(o.material) ? o.material.map((_, i) => i ? GB : G) : G; }
+    { const rk = context.getObjectByName('river_boulders'); rk?.traverse(o => { if (o.isMesh) { o.material = GR; if (o.isInstancedMesh) o.instanceColor = null; } }); }
+    context.traverse(o => { if (o.name === 'water_section') o.visible = false; });
+    // surround: continues the plinth edge height, settles to near-flat map ground, fades into the void
+    const { X0, X1, Z0, Z1, E, ST } = P, hx = (X1 - X0) / 2, hz = (Z1 - Z0) / 2, half = Math.max(hx, hz);
+    const BX0 = X0 - E, BX1 = X1 + E, BZ0 = Z0 - E, BZ1 = Z1 + E, nx = Math.round((BX1 - BX0) / ST), nz = Math.round((BZ1 - BZ0) / ST);
+    const pos = new Float32Array((nx + 1) * (nz + 1) * 3), mist = new Float32Array((nx + 1) * (nz + 1)), idx = [];
+    for (let j = 0, k = 0; j <= nz; j++) for (let i = 0; i <= nx; i++, k++) {
+      const x = BX0 + i * ST, z = BZ0 + j * ST, cx = Math.min(X1, Math.max(X0, x)), cz = Math.min(Z1, Math.max(Z0, z)), d = Math.hypot(x - cx, z - cz);
+      let y;
+      if (d === 0) y = terrainY(x, z) - 1.5;                                                          // hidden filler under the plinth
+      else { y = Math.max(terrainY(cx, cz), P.floor(cx, cz)) * (1 - sm(0, half * P.fall, d)) + P.bump * (Math.sin(x * .013 + z * .007) * Math.sin(z * .011 - x * .004));
+        mist[k] = Math.max(sm(half * .25, half * 2.2, d), 1 - sm(0, E * .25, Math.min(x - BX0, BX1 - x, z - BZ0, BZ1 - z))); }
+      pos.set([x, y, z], k * 3);
+    }
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, dd = c + 1; idx.push(a, c, b, b, c, dd); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('mist', new THREE.BufferAttribute(mist, 1)); g.setIndex(idx); g.computeVertexNormals();
+    const sur = new THREE.Mesh(g, groundMat(0x2a7f8f, true)); sur.name = 'map_surround'; sur.castShadow = false; sur.receiveShadow = true; context.add(sur);
+    // scattered lights (mostly warm, a few cool), kept off the model and the water
+    const N = P.lights, lp = new Float32Array(N * 3), lc = new Float32Array(N * 3), warm = new THREE.Color(0xffc45a), cool = new THREE.Color(0xbff3ea), c = new THREE.Color();
+    for (let k = 0, t = 0; k < N && t < 60000; t++) {
+      const i = Math.floor(rnd() * (pos.length / 3)), x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+      if (mist[i] > .7 || P.keepOut(x, z) || (x > X0 && x < X1 && z > Z0 && z < Z1)) continue;
+      lp.set([x, y + 1, z], k * 3); c.copy(rnd() < .85 ? warm : cool).multiplyScalar(2.2 + rnd() * 2.6); lc.set([c.r, c.g, c.b], k * 3); k++;
+    }
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(lp, 3)); lg.setAttribute('color', new THREE.BufferAttribute(lc, 3));
+    const pts = new THREE.Points(lg, new THREE.PointsMaterial({ size: 2, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, fog: false }));
+    pts.name = 'ground_lights'; context.add(pts);
+  }
+  stage.content.add(context);
+  stage.add(root);
+  enableWaterReflections(stage, { scale: .5 });   // reservoir + river mirror the gorge, forest and dam face
+  context.traverse(o => { if (o.isMesh && o !== spray) o.receiveShadow = true; });
+  { const bb = new THREE.Box3(V(-hw(H) - 40, -4, -30), V(hw(H) + 40, H + 12, 130)); stage.rig.fit(bb, 4096); }
+  await renderer.compileAsync(stage.scene, camera);
+  lap('shaders compiled');
+
+  // ─────────────────────────────────────────────────────────── 8 · sound
+  let ac = null, out = null, soundOn = false, roar = null;
+  function audio() {
+    if (ac) return ac; ac = new AudioContext();
+    const comp = ac.createDynamicsCompressor(), dly = ac.createDelay(), fb = ac.createGain(), lp = ac.createBiquadFilter();
+    out = ac.createGain(); out.gain.value = .22; lp.type = 'lowpass'; lp.frequency.value = 3200; dly.delayTime.value = .23; fb.gain.value = .3;
+    out.connect(lp); lp.connect(comp); lp.connect(dly); dly.connect(fb); fb.connect(dly); dly.connect(comp); comp.connect(ac.destination);
+    // water roar: looped brown noise through a low band-pass, gain follows the flow
+    const n = ac.sampleRate * 3, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0); let last = 0;
+    for (let i = 0; i < n; i++) { last = (last + .02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
+    const src = ac.createBufferSource(), bp = ac.createBiquadFilter(), g = ac.createGain(); src.buffer = buf; src.loop = true; bp.type = 'lowpass'; bp.frequency.value = 700; g.gain.value = 0;
+    src.connect(bp); bp.connect(g); g.connect(comp); src.start(); roar = { g, bp }; return ac;
+  }
+  const SCALE = [293.66, 329.63, 392, 440, 493.88, 587.33, 659.25, 783.99, 880];
+  function chime(i, up = true, vol = 1) {
+    if (!soundOn) return; const c = audio(), t = c.currentTime, f = SCALE[((i % SCALE.length) + SCALE.length) % SCALE.length] * (up ? 1 : .5);
+    for (const [mul, g0] of [[1, .5], [2.76, .12], [5.4, .04]]) {
+      const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f * mul;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(g0 * vol, t + .006); g.gain.exponentialRampToValueAtTime(.0001, t + (up ? 2.2 : 1.1) / mul ** .3);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + 2.4);
+    }
+  }
+  function knock(row) {   // a ceramic tap for the tile ripple: short filtered noise + a body tone tuned by height
+    if (!soundOn) return; const c = audio(), t = c.currentTime, n = c.sampleRate * .08, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / n * 9);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = buf; f.type = 'bandpass'; f.frequency.value = 1800 + row * 40; f.Q.value = 4; g.gain.value = .5;
+    s.connect(f); f.connect(g); g.connect(out); s.start(t); chime(Math.floor(row / 5), true, .5);
+  }
+  function whoosh() {
+    if (!soundOn) return; const c = audio(), n = c.sampleRate * .6, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / n);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = buf; f.type = 'bandpass'; f.Q.value = .8;
+    f.frequency.setValueAtTime(300, c.currentTime); f.frequency.exponentialRampToValueAtTime(2400, c.currentTime + .55); g.gain.value = .18;
+    s.connect(f); f.connect(g); g.connect(out); s.start();
+  }
+
+  // ─────────────────────────────────────────────────────────── 9 · UI state
+  let look = 'dusk', quality = 'high', flowT = 0, flow = 0, flowV = 0;
+  const press = (sel, val, attr) => document.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === val)));
+  function setLook(v) { look = v; stage.setMood(v === 'clay' ? 'day' : v); stage.setClay(v === 'clay'); stage.scene.background = MAP_BG; press('[data-look]', v, 'look'); $('t-mood').textContent = v.toUpperCase(); whoosh(); }
+  document.querySelectorAll('[data-look]').forEach(b => b.onclick = () => setLook(b.dataset.look));
+  const anyLit = () => LIT.some(l => l.target > 0);
+  function lamps(on) { LIT.forEach((l, i) => setTimeout(() => { l.target = on ? 1 : 0; chime(i * 3 + 2, on); }, i * 260)); setTimeout(syncButtons, 10); }
+  function syncButtons() { $('a-lamps').textContent = anyLit() ? 'Lamps off' : 'Lamps on'; $('a-water').textContent = flowT > 0 ? 'Close gates' : 'Release water'; }
+  $('a-lamps').onclick = () => lamps(!anyLit());
+  function setFlow(on) { flowT = on ? 1 : 0; syncButtons(); whoosh(); if (soundOn) audio(); }
+  $('a-water').onclick = () => setFlow(flowT === 0);
+  $('a-sound').onclick = () => { soundOn = !soundOn; if (soundOn) audio().resume(); $('a-sound').textContent = soundOn ? 'Sound on' : 'Sound off'; $('a-sound').setAttribute('aria-pressed', String(soundOn)); };
+  function setQuality(q) { quality = q; stage.setQuality(q); $('t-q').textContent = q.toUpperCase(); $('a-q').textContent = 'Quality: ' + q; }
+  $('a-q').onclick = () => setQuality(quality === 'high' ? 'low' : 'high');
+  if (['localhost', '127.0.0.1'].includes(location.hostname)) { $('a-glb').hidden = false; $('a-glb').onclick = () => stage.exportGLB(root); }
+  $('s-kit').textContent = KIT_VERSION;
+
+  // ─────────────────────────────────────────────────────────── 10 · fixed-angle camera rig (two composed views)
+  // FRONT: up the river at the whole face (user ref 2). STEPS: high on the west abutment, looking down the terraces (user ref 3).
+  const VIEWS = {
+    front: { az: 180, el: 8.5, target: V(0, 60, 64), half: 205 },
+    steps: { az: 300, el: 40, target: V(-20, 52, 66), half: 75 },
+  };
+  let view = 'front';
+  const cur = { az: VIEWS.front.az, el: VIEWS.front.el, target: VIEWS.front.target.clone(), half: VIEWS.front.half };
+  const st = { yaw: 0, pitch: 0, yawT: 0, pitchT: 0, zoom: 1, zoomT: 1, pan: V(0, 0, 0), panT: V(0, 0, 0) };
+  const distFor = half => { const aspect = innerWidth / innerHeight, vf = camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
+    return Math.max((aspect < 1 ? half * .62 : half) / Math.tan(hf / 2), half * .5 / Math.tan(vf / 2)); };
+  function setView(v) { view = v; press('[data-view]', v, 'view'); st.panT.set(0, 0, 0); st.zoomT = 1; whoosh(); }
+  document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => setView(b.dataset.view));
+  const ray = new THREE.Raycaster(), hit = new THREE.Vector3();
+  const facePlane = new THREE.Plane().setFromNormalAndCoplanarPoint(V(0, .8, 1).normalize(), V(0, 0, zF(0)));
+  const ndc = (cx, cy) => new THREE.Vector2(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1);
+  const ZMIN = .04, ZMAX = 1.6;
+  function zoomAt(cx, cy, f) {
+    const nz = clamp(st.zoomT * f, ZMIN, ZMAX);
+    ray.setFromCamera(ndc(cx, cy), camera);
+    if (ray.ray.intersectPlane(facePlane, hit)) { const k = 1 - nz / st.zoomT, c = cur.target.clone().add(st.panT); st.panT.addScaledVector(hit.sub(c), k); }
+    st.zoomT = nz; if (st.zoomT >= .999) st.panT.set(0, 0, 0); clampPan();
+  }
+  function clampPan() { st.panT.x = clamp(st.panT.x, -230, 230); st.panT.y = clamp(st.panT.y, -60, 70); st.panT.z = clamp(st.panT.z, -60, 60); }
+  function reset() { st.yawT = st.pitchT = 0; st.zoomT = 1; st.panT.set(0, 0, 0); }
+  $('a-reset').onclick = reset;
+
+  // ─────────────────────────────────────────────────────────── 11 · interaction (tiles ripple, temples switch)
+  const el = renderer.domElement, pointers = new Map(); let drag = null, hover = null, pinch0 = null, downAt = null;
+  const ripples = [];   // { x, y, z, t }
+  const pickables = [...tileMeshes, ...NICHES.map(n => n.hit)];
+  function pick(cx, cy) {
+    ray.setFromCamera(ndc(cx, cy), camera);
+    const h = ray.intersectObjects(pickables, false)[0]; if (!h) return null;
+    if (h.object.userData.niche) return { niche: h.object.userData.niche };
+    const t = tiles.find(t => t.mesh === h.object && t.index === h.instanceId); return t ? { tile: t } : null;
+  }
+  el.addEventListener('contextmenu', e => e.preventDefault());
+  el.addEventListener('pointerdown', e => {
+    el.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (e.pointerType !== 'mouse') hoverAt(e.clientX, e.clientY);
+    if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch0 = { d: Math.hypot(a.x - b.x, a.y - b.y), z: st.zoomT }; drag = null; return; }
+    drag = { mode: e.shiftKey || e.button === 2 ? 'pan' : 'tilt', x: e.clientX, y: e.clientY };
+    el.style.cursor = drag.mode === 'pan' ? 'move' : 'grabbing';
+  });
+  let hoverQueued = null;
+  el.addEventListener('pointermove', e => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch0 && pointers.size === 2) { const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y); zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, (pinch0.z * pinch0.d / d) / st.zoomT); return; }
+    if (drag) {
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+      if (drag.mode === 'tilt') { st.yawT = clamp(st.yawT - dx * .03, -10, 10); st.pitchT = clamp(st.pitchT + dy * .02, -4, 8); }
+      else { const k = distFor(cur.half) * st.zoom * Math.tan(camera.fov * Math.PI / 360) * 2 / innerHeight;
+        const rx = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), uy = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+        st.panT.addScaledVector(rx, -dx * k).addScaledVector(uy, dy * k); clampPan(); }
+      return;
+    }
+    hoverQueued = [e.clientX, e.clientY];   // raycasts run once per frame, not per event
+  });
+  const end = e => {
+    pointers.delete(e.pointerId); if (pointers.size < 2) pinch0 = null;
+    const moved = downAt ? Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) : 99;
+    if (drag && drag.mode === 'tilt' && moved < 5 && performance.now() - downAt.t < 400) {
+      const p = pick(e.clientX, e.clientY);
+      if (p?.niche) { const L = LIT[p.niche.id]; L.target = L.target > .5 ? 0 : 1; chime(p.niche.id * 3 + 2, L.target > .5); syncButtons(); }
+      else if (p?.tile) { const t = p.tile; ripples.push({ x: t.x, y: t.y, z: t.z, t: 0 }); if (ripples.length > 4) ripples.shift(); knock(t.r); }
+    }
+    drag = null; el.style.cursor = hover ? 'pointer' : 'grab';
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(e.deltaY * .0012)); }, { passive: false });
+  el.addEventListener('dblclick', reset);
+  el.addEventListener('pointerleave', () => setHover(null));
+  const hexCss = c => '#' + c.toString(16).padStart(6, '0');
+  function setHover(h, cx, cy) {
+    if (hover?.niche) LIT[hover.niche.id].hover = 0;
+    hover = h; if (h?.niche) LIT[h.niche.id].hover = 1;
+    el.style.cursor = drag ? el.style.cursor : h ? 'pointer' : 'grab';
+    const tip = $('tip'); tip.style.opacity = h ? 1 : 0; if (!h) return;
+    if (h.niche) { const L = LIT[h.niche.id]; tip.innerHTML = `<b>${h.niche.name}</b><br>EL::${h.niche.r0 * RH}–${(h.niche.r1 + 1) * RH} M · OPENING::${(W(h.niche, h.niche.rc) * 2).toFixed(0)} M<br>LAMPS::${L.target > .5 ? 'LIT' : 'DARK'}<br><span style="opacity:.6">click to switch</span>`; }
+    else { const t = h.tile; tip.innerHTML = `<b><i style="background:${hexCss(t.col)}"></i>${NAMES.get(t.col) ?? 'TILE'}</b><br>TERRACE::${String(t.r + 1).padStart(2, '0')} · EL::${t.r * RH} M${t.stair ? ' · STAIR' : ''}<br><span style="opacity:.6">click for a ripple</span>`; }
+    tip.style.left = Math.min(cx, innerWidth - 230) + 'px'; tip.style.top = cy + 'px';
+  }
+  function hoverAt(cx, cy) { setHover(pick(cx, cy), cx, cy); }
+  addEventListener('keydown', e => {
+    if (e.target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
+    const k = e.key.toLowerCase();
+    if (k === 'l') $('a-lamps').click(); else if (k === 'w') $('a-water').click(); else if (k === 'v') setView(view === 'front' ? 'steps' : 'front');
+    else if (k === '1') setLook('dusk'); else if (k === '2') setLook('golden'); else if (k === '3') setLook('day'); else if (k === '4') setLook('clay');
+    else if (k === '0') reset(); else if (k === 'q') $('a-q').click(); else if (k === 'm') $('a-sound').click();
+    else if (k === '+' || k === '=') zoomAt(innerWidth / 2, innerHeight / 2, .8); else if (k === '-') zoomAt(innerWidth / 2, innerHeight / 2, 1.25);
+  });
+  el.style.cursor = 'grab';
+
+  // ─────────────────────────────────────────────────────────── 12 · loop
+  const clock = new THREE.Clock(); let frames = 0, acc = 0, uiTick = 1, fixedDt = 0, time = 0;
+  const bounceWarm = new THREE.Color(0x7a4a22), bounceBase = new THREE.Color(), tmpC = new THREE.Color(), tmpM = new THREE.Matrix4(), tmpV = new THREE.Vector3();
+  let rippleDirty = false;
+  function updateRipples(dt) {
+    for (const r of ripples) r.t += dt;
+    while (ripples.length && ripples[0].t > 4) ripples.shift();
+    const live = ripples.length > 0; if (!live && !rippleDirty) return;
+    const clay = look === 'clay';
+    for (const t of tiles) {
+      let w = 0;
+      for (const r of ripples) { const d = Math.hypot(t.x - r.x, t.y - r.y, (t.z - r.z) * .5), f = d - 62 * r.t; w += Math.exp(-f * f / 90) * Math.exp(-r.t * .9) * Math.min(1, r.t * 8); }
+      w = Math.min(w, 1.4);
+      if (!clay && t.mesh.instanceColor) { tmpC.copy(t.base).multiplyScalar(1 + w * 1.1); if (hover?.tile === t) tmpC.multiplyScalar(1.3); t.mesh.setColorAt(t.index, tmpC); }
+      // the ripple lifts each block forward a little: the textile "breathes" outward and settles
+      tmpM.copy(t.matrix); tmpV.setFromMatrixPosition(tmpM); tmpV.z += w * .9; tmpM.setPosition(tmpV); t.mesh.setMatrixAt(t.index, tmpM);
+    }
+    for (const m of tileMeshes) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+    rippleDirty = live;
+  }
+  let lastHoverTile = null;
+  function hoverTint() {
+    const t = hover?.tile ?? null; if (t === lastHoverTile || ripples.length || look === 'clay') return;
+    if (lastHoverTile?.mesh.instanceColor) { lastHoverTile.mesh.setColorAt(lastHoverTile.index, lastHoverTile.base); lastHoverTile.mesh.instanceColor.needsUpdate = true; }
+    if (t?.mesh.instanceColor) { t.mesh.setColorAt(t.index, tmpC.copy(t.base).multiplyScalar(1.3)); t.mesh.instanceColor.needsUpdate = true; }
+    lastHoverTile = t;
+  }
+  function updateSpray(dt) {
+    const on = flow > .02; spray.visible = on && look !== 'clay';
+    if (!on && !spLife.some(l => l > 0)) return;
+    const emit = Math.floor(flow * 900 * dt);
+    let e = 0;
+    for (let i = 0; i < NSP; i++) {
+      if (spLife[i] <= 0) {
+        if (e < emit) { const o = OUT[i & 1]; spPos.set([o.x + (rnd() - .5) * 8, WL_RIV + .5, zF(0) + 28 + (rnd() - .5) * 8], i * 3); spVel.set([(rnd() - .5) * 7, 4 + rnd() * 9, 2 + rnd() * 7], i * 3); spLife[i] = 1.2 + rnd() * 1.2; e++; }
+        else { spPos[i * 3 + 1] = -999; continue; }
+      }
+      spLife[i] -= dt; spVel[i * 3 + 1] -= 9.8 * dt; spVel[i * 3] *= Math.exp(-dt * .8); spVel[i * 3 + 2] *= Math.exp(-dt * .8);
+      spPos[i * 3] += spVel[i * 3] * dt; spPos[i * 3 + 1] += spVel[i * 3 + 1] * dt; spPos[i * 3 + 2] += spVel[i * 3 + 2] * dt;
+      if (spLife[i] <= 0) spPos[i * 3 + 1] = -999;
+    }
+    spray.geometry.attributes.position.needsUpdate = true;
+  }
+  const loop = () => {
+    const dt = fixedDt || Math.min(clock.getDelta(), .05), k = 1 - Math.exp(-dt * 7), kv = 1 - Math.exp(-dt * 3.2); time += dt;
+    if (hoverQueued && !drag) { hoverAt(...hoverQueued); hoverQueued = null; }
+    // camera: composed view, tilt springs back, no idle motion (thin joints would crawl)
+    const V_ = VIEWS[view];
+    cur.az += (V_.az - cur.az) * kv; cur.el += (V_.el - cur.el) * kv; cur.half += (V_.half - cur.half) * kv; cur.target.lerp(V_.target, kv);
+    if (Math.abs(cur.az - V_.az) < 1e-4 && cur.target.distanceToSquared(V_.target) < 1e-8) { cur.az = V_.az; cur.el = V_.el; cur.half = V_.half; cur.target.copy(V_.target); }
+    if (!drag) { st.yawT *= Math.exp(-dt * 2.6); st.pitchT *= Math.exp(-dt * 2.6); }
+    st.yaw += (st.yawT - st.yaw) * k; st.pitch += (st.pitchT - st.pitch) * k; st.zoom += (st.zoomT - st.zoom) * k; st.pan.lerp(st.panT, k);
+    if (!drag && Math.abs(st.yawT) < 1e-3 && Math.abs(st.yaw) < 1e-3) st.yaw = st.yawT = 0;
+    if (!drag && Math.abs(st.pitchT) < 1e-3 && Math.abs(st.pitch) < 1e-3) st.pitch = st.pitchT = 0;
+    if (Math.abs(st.zoomT - st.zoom) < 1e-5) st.zoom = st.zoomT;
+    if (st.pan.distanceToSquared(st.panT) < 1e-8) st.pan.copy(st.panT);
+    const tgt = cur.target.clone().add(st.pan), dist = distFor(cur.half) * st.zoom;
+    camera.position.copy(tgt).addScaledVector(sunDirection(cur.az + st.yaw, cur.el + st.pitch), dist); camera.lookAt(tgt);
+    camera.near = Math.max(.3, dist / 1500); camera.far = 9000; camera.updateProjectionMatrix();
+    director.drive(camera);   // UI shell (embed): its tweened camera overrides the rig
+    // temple lamps: damped spring with a little overshoot
+    const mood = MOODS[look === 'clay' ? 'day' : look], dusk = look === 'dusk' || look === 'golden', gk = look === 'golden' ? .5 : 1   /* golden hour: lamps on, half strength */, clay = look === 'clay';
+    let sum = 0, lit = 0;
+    for (const L of LIT) {
+      const goal = L.target * (1 + L.hover * .3);
+      L.vel += (goal - L.level) * 60 * dt; L.vel *= Math.exp(-dt * 10); L.level = Math.max(0, L.level + L.vel * dt);
+      const e = dusk ? gk : .12;
+      L.glow.color.set(mood.glow.color).multiplyScalar(mood.glow.scale * (dusk ? L.level * 1.1 : 1));
+      L.mural.emissiveIntensity = .85 * e * L.level; L.ceil.emissiveIntensity = 1.0 * e * L.level; L.side.emissiveIntensity = .55 * e * L.level;
+      L.floor.emissiveIntensity = .45 * e * L.level; L.wall.emissiveIntensity = .5 * e * L.level; L.gold.emissiveIntensity = .4 * e * L.level;
+      sum += Math.min(L.level, 1); if (L.target > .5) lit++;
+    }
+    const avg = sum / LIT.length;
+    lanternGlow.color.set(mood.glow.color).multiplyScalar(mood.glow.scale * (dusk ? .75 : 1));
+    bounceBase.set(mood.hemi.ground); stage.rig.hemi.groundColor.copy(bounceBase).lerp(bounceWarm, clay || !dusk ? 0 : avg * .5);
+    // water: gates lift, jets swell, foam and spray follow (spring, so the release has weight)
+    flowV += (flowT - flow) * 9 * dt; flowV *= Math.exp(-dt * 5); flow = clamp(flow + flowV * dt, 0, 1.15);
+    for (const o of OUT) {
+      o.gate.position.y = 2.6 + clamp(flow, 0, 1) * 5.4;
+      o.jet.visible = o.foam.visible = flow > .01 && !clay; o.jet.scale.set(.25 + .75 * clamp(flow, 0, 1), .25 + .75 * clamp(flow, 0, 1), 1);
+    }
+    foamMat.color.set(look === 'dusk' ? 0x7d8d94 : 0xdfeef2); spray.material.color.set(look === 'dusk' ? 0x9aa8ae : 0xe8f2f5);   // unlit FX: keep them below the bloom threshold at dusk
+    jetMat.opacity = .9 * clamp(flow * 1.5, 0, 1); foamMat.opacity = .75 * clamp(flow, 0, 1) * (.85 + .15 * Math.sin(time * 6));
+    foamTex.offset.y -= dt * (.4 + flow * 2.2); foamTex.offset.x += dt * .05;
+    riv.userData.setFlow(1 + flow * 1.6);   // released water: faster current, choppier river
+    updateSpray(dt); updateRipples(dt); hoverTint();
+    if (roar) { roar.g.gain.setTargetAtTime(soundOn ? clamp(flow, 0, 1) * .9 : 0, ac.currentTime, .3); roar.bp.frequency.setTargetAtTime(400 + flow * 700, ac.currentTime, .3); }
+    if ((uiTick += dt) > .1) { uiTick = 0;
+      $('m-glow').style.width = (avg * 100).toFixed(0) + '%'; $('m-glow-v').textContent = (avg * 100).toFixed(0) + '%';
+      const fp = (clamp(flow, 0, 1) * 100).toFixed(0); $('m-flow').style.width = fp + '%'; $('m-flow-v').textContent = fp + '%'; $('t-flow').textContent = fp + '%';
+      $('t-lit').textContent = `${lit}/${LIT.length}`; $('t-zoom').textContent = (1 / st.zoom).toFixed(2) + '×';
+      $('s-state').textContent = flow > .05 ? 'RELEASING' : 'HOLDING'; $('status').classList.toggle('dark', flow <= .05 && !lit); }
+    stage.composer.render();
+    if (fixedDt) return;
+    frames++; acc += dt; if (acc > .5) { $('t-fps').textContent = Math.round(frames / acc); frames = 0; acc = 0; }
+  };
+  // UI shell director: hero framing + component categories (Masar-style component mode)
+  const director = createDirector(stage, {
+    hero: { az: 180, el: 8.5, tx: 0, ty: 60, tz: 64, half: 205, fov: 30 },
+    overview: { az: 200, el: 45, tx: 0, ty: 50, tz: 40, half: 230, fov: 30 },
+    components: [
+      { id: 'face', label: 'Textile face', layers: ['L_face'], color: 0xffc450, stat: { big: '120 m high · 40 terraces', small: 'a woven face of 6 × 3 m tiles' }, view: { az: 180, el: 14, tx: 0, ty: 60, tz: 60, half: 205 } },
+      { id: 'stairs', label: 'Pilgrim stairs', layers: ['L_stairs'], color: 0xf29a2e, axis: 'y', stat: { big: 'Climbing routes', small: 'stairs up the stepped face' }, view: { az: 300, el: 40, tx: -20, ty: 52, tz: 66, half: 90 } },
+      { id: 'temples', label: 'Temple niches', layers: ['L_niches', 'L_temples'], color: 0xe8a48a, stat: { big: '2 temple niches', small: 'nested in the face · lamp-lit' }, view: { az: 190, el: 20, tx: 0, ty: 70, tz: 40, half: 80 } },
+      { id: 'crest', label: 'Crest walk', layers: ['L_crest'], color: 0xfff3dc, stat: { big: '348 m crest', small: 'a walkway across the gorge' }, view: { az: 160, el: 45, tx: 0, ty: 118, tz: 0, half: 190 } },
+      { id: 'outlets', label: 'Outlets', layers: ['L_outlets'], color: 0xc8743a, stat: { big: 'Sluice outlets', small: 'release the Sankosh downstream' }, view: { az: 180, el: 15, tx: 0, ty: 8, tz: 100, half: 60 } },
+      { id: 'reservoir', label: 'Reservoir', layers: ['reservoir'], color: 0xffc450, axis: 'z', stat: { big: 'Reservoir', small: 'fills the gorge behind the dam' }, view: { az: 200, el: 50, tx: 0, ty: 100, tz: -120, half: 260 } },
+    ],
+  });
+  renderer.setAnimationLoop(loop);
+
+  setLook(EMBED ? 'golden' : 'dusk');
+  setTimeout(() => { $('loader').style.opacity = 0; setTimeout(() => $('loader')?.remove(), 900); if (!EMBED) setTimeout(() => lamps(true), 700); }, 60);
+
+  const report = (() => { try { return stage.validate(root); } catch (e) { return { ok: false, errors: [String(e)] }; } })(); console.info('[O2] validate', report);
+  window.__api = { stage, root, context, LIT, NICHES, tiles, st, cur, setLook, setView, reset, zoomAt, lamps, setFlow, ripples, validate: () => stage.validate(root), tris: () => countTriangles(root),
+    view(zoom = 1, px = 0, py = 0, pz = 0, yaw = 0, pitch = 0) { st.zoomT = st.zoom = zoom; st.panT.set(px, py, pz); st.pan.copy(st.panT); st.yawT = st.yaw = yaw; st.pitchT = st.pitch = pitch;
+      const V_ = VIEWS[view]; cur.az = V_.az; cur.el = V_.el; cur.half = V_.half; cur.target.copy(V_.target); },
+    lampsNow(v = 1) { LIT.forEach(l => { l.target = v; l.level = v; l.vel = 0; }); syncButtons(); },
+    flowNow(v = 1) { flowT = flow = v; flowV = 0; syncButtons(); },
+    step(n = 30) { fixedDt = 1 / 30; for (let i = 0; i < n; i++) loop(); fixedDt = 0; },
+    // UI shell
+    director, embedded: EMBED,
+    pause(v) { renderer.setAnimationLoop(v ? null : loop); if (!v) clock.getDelta(); },
+    warm() { loop(); clock.getDelta(); },   // render one frame while hidden: uploads textures before the reveal (no first-frame hitch)
+    setExposure(k) { renderer.toneMappingExposure = MOODS[look === 'clay' ? 'day' : look].exposure * k; } };
+  window.__ok = true;
+} catch (e) {
+  console.error(e); window.__err = String(e && e.stack || e);
+  const er = $('err'); er.hidden = false; er.textContent = 'Could not build the model: ' + e.message;
+  $('loader')?.remove();
+}
+</script>

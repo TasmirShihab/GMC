@@ -55,7 +55,7 @@
 .kicker {
   margin-top: 0.75em;
   font-weight: 700;
-  font-size: clamp(11px, 0.85vw, 18px);
+  font-size: var(--fs-label);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -91,7 +91,7 @@
 
 .credit {
   margin-top: 0.8em;
-  font-size: clamp(10px, 0.68vw, 13px);
+  font-size: var(--fs-meta);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--c-brown-soft);

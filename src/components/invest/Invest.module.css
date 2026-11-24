@@ -68,19 +68,20 @@
 
 /* Rounded to sit concentric inside the card. */
 .photo {
-  flex: 0 0 62%;
+  flex: 0 0 56%;
   overflow: hidden;
   border-radius: calc(var(--r) - var(--pad) * 0.6);
 }
 
-/* Number bottom-left, label (and its source) bottom-right, as in the reference card. */
+/* Label and its source under the photo, the big number anchored at the bottom. (The reference set the
+   label beside the number; at a readable 13px it no longer fits there, so it stacks.) */
 .info {
   flex: 1 1 auto;
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: flex-end;
   gap: 0.8em;
-  padding: 0 clamp(6px, 0.55vw, 10px) clamp(18px, 1.6vw, 28px);
+  padding: clamp(14px, 1.4vw, 22px) clamp(6px, 0.55vw, 10px) clamp(18px, 1.6vw, 28px);
 }
 
 .value {
@@ -99,26 +100,24 @@
 }
 
 .meta {
-  max-width: 50%;
-  text-align: right;
+  order: -1;
 }
 
 .label {
   margin: 0;
   font-weight: 700;
-  font-size: clamp(8px, 0.58vw, 11px);
+  font-size: var(--fs-label);
   letter-spacing: 0.06em;
   line-height: 1.45;
   text-transform: uppercase;
 }
 
 .source {
-  margin: 0.5em 0 0;
-  font-size: clamp(7px, 0.48vw, 9px);
-  letter-spacing: 0.04em;
+  margin: 0.4em 0 0;
+  font-size: var(--fs-meta);
   line-height: 1.4;
-  text-transform: uppercase;
-  opacity: 0.6;
+  /* sentence case and a little more ink: small text on the dark card stays readable (≈5:1) */
+  opacity: 0.75;
 }
 
 /* ── 2 · Sectors (fifth reference recording) ───────────── */
@@ -184,7 +183,7 @@
 .kicker {
   margin-top: 0.75em;
   font-weight: 700;
-  font-size: clamp(11px, 0.85vw, 18px);
+  font-size: var(--fs-label);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -207,7 +206,7 @@
 .body {
   max-width: 26em;
   margin: clamp(12px, 2.2vh, 28px) 0 0;
-  font-size: clamp(13px, 1vw, 18px);
+  font-size: var(--fs-body);
   line-height: 1.5;
 }
 
@@ -289,7 +288,7 @@
   color: var(--c-hero-text);
   font-family: var(--font-title);
   font-weight: 800;
-  font-size: clamp(9px, 0.68vw, 13px);
+  font-size: var(--fs-nav);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;

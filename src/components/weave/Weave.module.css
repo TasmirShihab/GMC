@@ -1,0 +1,248 @@
+/* Seventh reference recording: heading and body centred, the mark on a cream card under them. */
+
+.weave {
+  --s: max(280px, min(46vw, calc(100svh - 200px), 620px));
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(36px, 6vh, 72px);
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: clamp(96px, 13vh, 150px) clamp(20px, 5vw, 80px) clamp(96px, 14vh, 150px);
+  overflow: hidden;
+  background: var(--c-terra);
+  color: var(--c-hero-text);
+  font-family: var(--font-sans);
+}
+
+.topo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ── Text (as in the About page) ───────────────────────── */
+
+.text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 40em;
+  text-align: center;
+}
+
+.kicker {
+  margin: 0 0 0.15em;
+  font-family: var(--font-script);
+  font-size: clamp(22px, 2.1vw, 46px);
+  line-height: 1;
+}
+
+.heading {
+  margin: 0 0 0.8em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.02em currentColor;
+  paint-order: stroke fill;
+  font-size: clamp(28px, 3.2vw, 70px);
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
+.body {
+  margin: 0 0 1em;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/* ── The mark on its cream card ────────────────────────── */
+
+.card {
+  --pad: calc(var(--s) * 0.03);
+  position: relative;
+  margin: 0;
+  padding: var(--pad) var(--pad) 0;
+  border-radius: clamp(10px, 1vw, 16px);
+  background: var(--c-paper-light);
+  box-shadow: 0 30px 60px -34px rgb(40 16 6 / 0.7);
+}
+
+.art {
+  position: relative;
+  width: var(--s);
+  aspect-ratio: 1;
+}
+
+.video,
+.mark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.video {
+  background: var(--c-brown);
+}
+
+.source {
+  display: none;
+}
+
+.weaves {
+  fill-opacity: 1;
+  stroke: none;
+  pointer-events: none;
+}
+
+.mark pattern path {
+  fill: none;
+  stroke: rgb(246 237 211 / 0.22);
+  stroke-width: 1.2;
+}
+
+.mark .basket {
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.saffron rect {
+  fill: var(--c-yellow);
+}
+
+.saffron path {
+  stroke: rgb(40 30 20 / 0.55);
+  stroke-width: 1.6;
+}
+
+/* Tiles and gaps: every edge is a cream stroke, so neighbours share one gap. */
+.tiles polygon,
+.tiles path {
+  stroke: var(--c-paper-light);
+  stroke-linejoin: round;
+}
+
+.tiles polygon[data-tone='indigo'] {
+  fill: #3d4573;
+}
+
+.tiles polygon[data-tone='slate'] {
+  fill: #5a6576;
+}
+
+.outline {
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-settle);
+  pointer-events: none;
+}
+
+.outline path {
+  fill: none;
+  stroke: var(--c-yellow);
+  stroke-linejoin: round;
+}
+
+.outline[data-on='true'] {
+  opacity: 1;
+}
+
+.river path {
+  fill: none;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.bank {
+  stroke: var(--c-paper-light);
+}
+
+.water {
+  stroke: #b9d3e2;
+}
+
+/* Light running down the water. */
+.flow {
+  stroke: rgb(255 255 255 / 0.85);
+  stroke-dasharray: 14 26;
+  stroke-linecap: round !important;
+  animation: flow 2.6s linear infinite;
+}
+
+.flowSlow {
+  stroke: rgb(120 160 190 / 0.6);
+  stroke-dasharray: 6 18 22 12;
+  animation-duration: 4.2s;
+}
+
+@keyframes flow {
+  to {
+    stroke-dashoffset: -80;
+  }
+}
+
+.card[data-paused='true'] .flow {
+  animation-play-state: paused;
+}
+
+.hit {
+  fill: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Bottom of the card: the pause button. */
+.pause {
+  display: grid;
+  place-items: center;
+  width: clamp(28px, calc(var(--s) * 0.06), 36px);
+  aspect-ratio: 1;
+  margin: calc(var(--pad) * 0.9) 0 calc(var(--pad) * 0.9) auto;
+  padding: 0;
+  border: 1px solid rgb(75 64 52 / 0.15);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--c-brown);
+  cursor: pointer;
+  transition:
+    background-color 0.3s,
+    border-color 0.3s;
+}
+
+.pause svg {
+  width: 44%;
+}
+
+.pause:hover,
+.pause:focus-visible {
+  background: var(--c-yellow);
+  border-color: var(--c-yellow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .weave {
+    --s: min(100%, 560px);
+  }
+  .card {
+    width: 100%;
+    max-width: calc(560px + 2 * var(--pad));
+  }
+  .art {
+    width: 100%;
+  }
+}

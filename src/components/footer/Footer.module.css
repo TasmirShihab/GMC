@@ -1,0 +1,333 @@
+/* Footer (layout from the references): a landscape that fades in from the FAQ's cream, with a rounded
+   cream card set into it, the picture showing around all its sides.
+   Inside the card: four titled link groups and a Connect column; a hairline; the GMC mark and name large
+   bottom-left, the small print bottom-right.
+   Spacing runs on one rhythm: 8 (inside a control) · 12 (between links) · 16 (title to its list)
+   · 40–56 (between columns, card padding) · 64–96 (between the link area and the signature). */
+
+.footer {
+  position: relative;
+  z-index: 1;
+  overflow: clip;
+  /* bottom: the card ends above the floating stupa, with landscape showing below it (as the reference) */
+  padding: clamp(280px, 46vh, 480px) clamp(16px, 3vw, 48px) clamp(104px, 14vh, 150px);
+  background: var(--c-paper);
+  color: var(--c-brown);
+  font-family: var(--font-sans);
+}
+
+.back {
+  position: absolute;
+  inset: 0;
+}
+
+.back img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 40%;
+  /* enlarged from its bottom edge so the mountain line rises to just above the card */
+  transform: scale(1.45);
+  transform-origin: 50% 100%;
+}
+
+/* The picture rises out of the FAQ's cream: solid at the very top, clear well before the card. */
+.fade {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 42%;
+  background: linear-gradient(
+    to bottom,
+    var(--c-paper) 0%,
+    var(--c-paper) 8%,
+    rgb(236 228 206 / 0.92) 22%,
+    rgb(236 228 206 / 0.55) 48%,
+    rgb(236 228 206 / 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* ── The card ──────────────────────────────────────────── */
+
+.card {
+  --pad: clamp(24px, 3.9vw, 56px);
+  position: relative;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--pad) var(--pad) clamp(24px, 2.8vw, 40px);
+  overflow: hidden;
+  border-radius: clamp(18px, 1.8vw, 28px);
+  background: var(--c-paper-light);
+  box-shadow: 0 30px 70px -30px rgb(30 18 8 / 0.55);
+}
+
+/* The site's faint topo lines, as on every cream page. */
+.topo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.top,
+.bottom {
+  position: relative;
+}
+
+/* Four link groups and the Connect column, on one grid with even gutters. */
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 260px);
+  column-gap: clamp(32px, 4vw, 72px);
+  align-items: start;
+}
+
+.links {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 40px clamp(24px, 2.8vw, 48px);
+}
+
+.groupTitle {
+  margin: 0 0 16px;
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: var(--fs-label);
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-terra);
+}
+
+.group ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.group li {
+  font-size: var(--fs-body-sm);
+  line-height: 1.3;
+}
+
+.group a {
+  color: var(--c-brown);
+  text-decoration: none;
+  transition: color 0.25s;
+}
+
+.group a:hover,
+.group a:focus-visible,
+.legal a:hover,
+.legal a:focus-visible {
+  color: var(--c-terra);
+}
+
+.group a:focus-visible,
+.signature:focus-visible,
+.actions a:focus-visible,
+.legal a:focus-visible {
+  outline: 2px solid var(--c-terra);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Connect: social, language, then the one call to action. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.langs,
+.social {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.langs {
+  margin-top: 12px;
+}
+
+.actions > :last-child {
+  margin-top: 24px;
+}
+
+.langs a {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgb(75 64 52 / 0.2);
+  border-radius: 999px;
+  color: var(--c-brown);
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: var(--fs-label);
+  text-decoration: none;
+  transition:
+    background-color 0.25s,
+    border-color 0.25s;
+}
+
+.langs a[lang='dz'] {
+  font-family: var(--font-dzongkha);
+  font-weight: 400;
+  font-size: var(--fs-body-sm);
+}
+
+.langs a[aria-current='true'] {
+  border-color: var(--c-brown);
+  background: var(--c-brown);
+  color: var(--c-paper-light);
+}
+
+.langs a:not([aria-current='true']):hover {
+  border-color: var(--c-brown);
+}
+
+/* Round social buttons, as the reference. */
+.social a {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgb(176 78 42 / 0.12);
+  color: var(--c-terra);
+  transition:
+    background-color 0.25s,
+    color 0.25s;
+}
+
+.social svg {
+  width: 20px;
+  height: 20px;
+}
+
+.social a:hover {
+  background: var(--c-yellow);
+  color: var(--c-brown);
+}
+
+/* ── Signature: the mark and the name, large, bottom-left; the small print bottom-right ── */
+
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 32px;
+  margin-top: clamp(56px, 6.5vw, 96px);
+  padding-top: clamp(28px, 3vw, 40px);
+  border-top: 1px solid rgb(75 64 52 / 0.14);
+}
+
+.signature {
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(16px, 1.8vw, 28px);
+  color: inherit;
+  text-decoration: none;
+}
+
+.signature img {
+  display: block;
+  width: auto;
+  height: clamp(72px, 8.4vw, 136px);
+}
+
+.wordmark {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.02em currentColor;
+  paint-order: stroke fill;
+  font-size: clamp(32px, 4.6vw, 84px);
+  line-height: 0.9;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  /* sits on the same baseline as the bottom of the mark */
+  margin-bottom: -0.08em;
+}
+
+.small {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+
+.legal {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.legal a {
+  color: var(--c-brown);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgb(75 64 52 / 0.35);
+  transition: color 0.25s;
+}
+
+.place {
+  margin: 0;
+  font-family: var(--font-script);
+  font-size: clamp(20px, 1.5vw, 26px);
+  line-height: 1.1;
+}
+
+.rights {
+  margin: 6px 0 0;
+  color: var(--c-brown-soft);
+}
+
+@media (max-width: 1100px) {
+  .top {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 40px;
+  }
+}
+
+@media (max-width: 800px) {
+  .links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .small {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .footer {
+    padding-top: clamp(200px, 32vh, 280px);
+  }
+  .back img {
+    transform: none;
+    object-position: 30% 35%;
+  }
+  .signature {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

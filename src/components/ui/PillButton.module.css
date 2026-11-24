@@ -13,7 +13,7 @@
   outline-offset: 5px;
   font-family: var(--font-title);
   font-weight: 800;
-  font-size: clamp(13px, 0.95vw, 18px);
+  font-size: var(--fs-nav);
   line-height: 1;
   letter-spacing: 0.02em;
   text-transform: uppercase;

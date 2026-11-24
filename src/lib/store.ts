@@ -36,7 +36,10 @@ interface ExperienceState {
   activeChapter: ChapterId | null
   debug: boolean
   intro: IntroPhase
+  /** The full-screen 3D map layer is open: the home page's own 3D and scroll stay paused under it. */
+  mapOpen: boolean
   setIntro: (intro: IntroPhase) => void
+  setMapOpen: (open: boolean) => void
   setProfile: (p: { tier: QualityTier; reducedMotion: boolean; lite: boolean; debug: boolean }) => void
   setTier: (tier: QualityTier) => void
   setActiveChapter: (id: ChapterId | null) => void
@@ -49,7 +52,9 @@ export const useExperience = create<ExperienceState>((set) => ({
   activeChapter: null,
   debug: false,
   intro: 'loading',
+  mapOpen: false,
   setIntro: (intro) => set({ intro }),
+  setMapOpen: (mapOpen) => set({ mapOpen }),
   setProfile: (p) => set(p),
   setTier: (tier) => set({ tier }),
   setActiveChapter: (activeChapter) => set({ activeChapter }),

@@ -102,7 +102,7 @@
   padding: 0 clamp(14px, 1.75vw, 40px);
   border-left: 1px solid rgb(246 237 211 / 0.28);
   font-weight: 700;
-  font-size: clamp(10px, 0.68vw, 15px);
+  font-size: var(--fs-nav);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   text-shadow: 0 1px 8px rgb(0 0 0 / 0.45);
@@ -110,15 +110,14 @@
 
 .cell svg {
   filter: drop-shadow(0 1px 4px rgb(0 0 0 / 0.4));
-  width: clamp(16px, 1.25vw, 28px);
-  height: auto;
-}
-
-/* The GMC outline icon: same height as the other icons, its own (wider) width. */
-.cell svg.outlineIcon {
+  /* every nav icon the same height (its width follows its shape), the line a fixed 1.5px */
   width: auto;
   height: clamp(16px, 1.25vw, 28px);
   overflow: visible;
+}
+
+.cell svg * {
+  vector-effect: non-scaling-stroke;
 }
 
 .menu {

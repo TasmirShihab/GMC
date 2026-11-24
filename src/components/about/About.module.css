@@ -60,7 +60,7 @@
   min-height: clamp(30px, 6.2vh, 60px);
   line-height: 1.15;
   font-weight: 700;
-  font-size: clamp(10px, 0.85vw, 18px);
+  font-size: var(--fs-label);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   opacity: 0.38;
@@ -157,14 +157,14 @@
 
 .areaLabel {
   font-weight: 700;
-  font-size: 0.5em;
+  font-size: var(--fs-label);
   letter-spacing: 0.04em;
   opacity: 0.85;
 }
 
 .source {
   margin: 0.5em 0 0;
-  font-size: clamp(10px, 0.68vw, 13px);
+  font-size: var(--fs-meta);
   letter-spacing: 0.02em;
   opacity: 0.7;
 }
@@ -295,7 +295,7 @@
 
 .tagName {
   font-weight: 800;
-  font-size: clamp(11px, 0.9vw, 19px);
+  font-size: var(--fs-label);
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -341,7 +341,7 @@
 
 .body {
   margin: 0 0 1.1em;
-  font-size: clamp(14px, 0.92vw, 19px);
+  font-size: var(--fs-body);
   line-height: 1.5;
 }
 

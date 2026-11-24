@@ -1,0 +1,162 @@
+/* The people's project, on the cream paper after the board.
+   Layout from the nonprofit-site reference: photo left (a rounded rectangle), text right. */
+
+.zhabtog {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  padding: clamp(72px, 11vh, 140px) clamp(16px, 6vw, 120px) clamp(88px, 13vh, 160px);
+  background: var(--c-paper);
+  color: var(--c-brown);
+  font-family: var(--font-sans);
+}
+
+/* Desktop with motion: one full screen (it pins and dissolves into the Take part section below),
+   and above that section, which waits underneath. */
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  .zhabtog {
+    z-index: 2;
+    /* covers the sub-pixel seam above, where the Take part picture waiting underneath could peek through */
+    box-shadow: 0 -2px 0 var(--c-paper);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100vh;
+    height: 100svh;
+    min-height: 640px;
+  }
+  .inner {
+    width: 100%;
+  }
+}
+
+/* Cream ground for the dissolve (the section's own background goes transparent while it runs). */
+.ground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+  color: var(--c-paper);
+  pointer-events: none;
+}
+
+.topo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  column-gap: clamp(56px, 8vw, 150px);
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* ── Photo ─────────────────────────────────────────────── */
+
+.figure {
+  position: relative;
+  margin: 0;
+}
+
+.photo {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: clamp(18px, 2vw, 32px);
+  background: var(--c-brown);
+  box-shadow: 0 30px 60px -36px rgb(60 40 20 / 0.55);
+}
+
+.photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 42% 60%;
+}
+
+.credit {
+  position: absolute;
+  left: clamp(10px, 1vw, 16px);
+  bottom: clamp(10px, 1vw, 16px);
+  padding: 0.55em 0.9em;
+  border-radius: 999px;
+  background: rgb(30 22 14 / 0.6);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--c-hero-text);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Text ──────────────────────────────────────────────── */
+
+.script {
+  margin: 0;
+  font-family: var(--font-script);
+  font-size: clamp(24px, 2.1vw, 44px);
+  line-height: 1;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  margin: clamp(10px, 1.6vh, 20px) 0 0;
+  font-family: var(--font-big);
+  font-weight: 400;
+  -webkit-text-stroke: 0.022em currentColor;
+  paint-order: stroke fill;
+  font-size: clamp(36px, 4.2vw, 84px);
+  line-height: 0.95;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+}
+
+.place {
+  margin: 0.9em 0 0;
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: var(--fs-label);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--c-terra);
+}
+
+.quote {
+  margin: clamp(22px, 3.4vh, 40px) 0 0;
+  padding: 0 0 clamp(22px, 3.4vh, 40px);
+  border-bottom: 1px solid rgb(75 64 52 / 0.16);
+}
+
+.quote p {
+  margin: 0;
+  max-width: 30em;
+  font-family: var(--font-big);
+  font-size: clamp(18px, 1.5vw, 28px);
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(14px, 1.2vw, 22px);
+  margin-top: clamp(24px, 3.6vh, 40px);
+}
+
+@media (max-width: 900px) {
+  .inner {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: clamp(56px, 8vh, 80px);
+  }
+}

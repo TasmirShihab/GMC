@@ -1,0 +1,1185 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Gelephu International Airport</title>
+<link rel="stylesheet" href="/3d-map/vendor/fonts/fonts.css">
+<style>
+  /* Layout: one fixed dusk elevation; UI floats in the four corners, the terminal runs across the middle band. */
+  :root {
+    color-scheme: dark;
+    --bg: #18130f;           /* umber */
+    --ink: #efece6;          /* sand */
+    --ink-2: rgba(239,236,230,.7);
+    --line: rgba(239,236,230,.14);
+    --panel: rgba(24,19,15,.64);
+    --saffron: #fe6417;
+    --maroon: #6d0033;
+    --honey: #ffc450;
+    --f-display: "Belleza", "Cormorant Garamond", Georgia, serif;
+    --f-body: "Alegreya Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); overflow: hidden; }
+  #stage { position: fixed; inset: 0; touch-action: none; }
+  #stage canvas { display: block; }
+  .mono { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; }
+  .panel { position: fixed; background: var(--panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--line); border-radius: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-2); white-space: nowrap; }
+  .chip b { color: var(--ink); font-weight: 500; }
+  #telemetry { top: calc(16px + env(safe-area-inset-top, 0px)); left: calc(16px + env(safe-area-inset-left, 0px)); padding: 8px; max-width: 360px; }
+  #variants { top: calc(16px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); padding: 5px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .seg { display: flex; border-radius: 999px; overflow: hidden; }
+  button { font: 500 12px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); background: transparent; border: 0; padding: 8px 14px; cursor: pointer; border-radius: 999px; }
+  button:hover { color: var(--ink); background: rgba(239,236,230,.07); }
+  button:focus-visible { outline: 2px solid var(--honey); outline-offset: 2px; }
+  button[aria-pressed="true"] { color: var(--bg); background: var(--ink); }
+  #hints { top: calc(16px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); padding: 12px 16px; line-height: 1.75; color: var(--ink-2); }
+  #hints b { color: var(--ink); font-weight: 500; }
+  #dock { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: calc(16px + env(safe-area-inset-left, 0px)); padding: 16px 18px; width: min(560px, calc(100vw - 32px)); display: grid; gap: 10px; }
+  #status { color: var(--ink-2); display: flex; gap: 14px; flex-wrap: wrap; }
+  #status .dot { color: var(--saffron); }
+  #status.dark .dot { color: var(--ink-2); }
+  #dock h1 { font: 400 clamp(22px, 3.2vw, 34px)/1.05 var(--f-display); margin: 0; letter-spacing: .01em; text-wrap: balance; }
+  #sub { color: var(--ink-2); }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .actions button { border: 1px solid var(--line); }
+  .actions button.primary { background: var(--maroon); color: var(--ink); border-color: transparent; }
+  .meters { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; }
+  .bar { height: 4px; border-radius: 4px; background: rgba(239,236,230,.12); overflow: hidden; }
+  #hz, label[for="hz"], #hz-v { display: none; }
+  #hz { width: 100%; margin: 0; accent-color: var(--saffron); cursor: pointer; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffaa3c, #fff3dc); border-radius: 4px; }
+  #tip { position: fixed; pointer-events: none; padding: 8px 10px; border-radius: 10px; background: rgba(24,19,15,.82); border: 1px solid var(--line); line-height: 1.6; transform: translate(14px, -50%); opacity: 0; transition: opacity .18s; }
+  #tip b { font-family: var(--f-display); font-size: 15px; font-weight: 400; letter-spacing: .02em; }
+  #loader { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 55%, #241d18, var(--bg) 70%); z-index: 20; transition: opacity .8s cubic-bezier(.16,1,.3,1); }
+  #loader .flame { width: 14px; height: 14px; border-radius: 50%; margin: 0 auto 14px; background: radial-gradient(circle, #fff3dc, #ffc450 45%, rgba(254,120,40,0) 72%); box-shadow: 0 0 22px 6px rgba(255,170,60,.35); animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.25); opacity: .75; } }
+  #err { position: fixed; right: 16px; bottom: 16px; max-width: 60vw; color: #ff8a8d; }
+  @media (max-width: 820px) { #hints { display: none; } #telemetry { max-width: calc(100vw - 32px); } #variants { top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: auto; right: calc(16px + env(safe-area-inset-right, 0px)); transform: none; } #dock { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } }
+  @media (prefers-reduced-motion: reduce) { #loader .flame { animation: none; } }
+</style>
+
+<div id="stage" aria-label="Gelephu International Airport, 3D model"></div>
+
+<div id="telemetry" class="panel"><div class="chips mono">
+  <span class="chip">FPS::<b id="t-fps">–</b></span>
+  <span class="chip">MOOD::<b id="t-mood">DUSK</b></span>
+  <span class="chip">LIT::<b id="t-lit">0/9</b></span>
+  <span class="chip">ZOOM::<b id="t-zoom">1.00</b></span>
+  <span class="chip">QUALITY::<b id="t-q">HIGH</b></span>
+</div></div>
+
+<div id="variants" class="panel"><div class="seg" role="group" aria-label="Look">
+  <button data-look="dusk" aria-pressed="true">Dusk</button>
+  <button data-look="golden" aria-pressed="false">Golden</button>
+  <button data-look="day" aria-pressed="false">Day</button>
+  <button data-look="clay" aria-pressed="false">Clay</button>
+</div><div class="seg" role="group" aria-label="View">
+  <button data-view="front" aria-pressed="true">Front</button>
+  <button data-view="aircraft" aria-pressed="false">Aircraft</button>
+  <button data-view="apron" aria-pressed="false">Apron</button>
+  <button data-view="jumbo" aria-pressed="false">747</button>
+  <button data-view="a321" aria-pressed="false">A321</button>
+</div></div>
+
+<div id="hints" class="panel mono">
+  <b>Hover</b> a gable · <b>Click</b> switch its lights<br>
+  <b>Wheel / pinch</b> zoom to cursor · <b>+ −</b><br>
+  <b>Drag</b> tilt (springs back) · <b>Shift / right-drag</b> pan<br>
+  <b>L</b> all lights · <b>1 2 3 4</b> dusk / golden / day / clay<br>
+  <b>V</b> next view · <b>T</b> 747 take-off<br>
+  <b>0</b> or <b>double-click</b> reset · <b>Q</b> quality · <b>M</b> sound
+</div>
+
+<div id="dock" class="panel">
+  <div id="status" class="mono"><span><span class="dot">●</span> TERMINAL::<b id="s-state">WARMING</b></span><span>GMC::O1</span><span>KIT::<b id="s-kit">–</b></span></div>
+  <h1>Gelephu International Airport</h1>
+  <div id="sub" class="mono">TIMBER DIAGRID · 9 GABLES · 504 M FRONTAGE · PEAK 28.8 M · DIAMOND 24 × 14.4 M</div>
+  <div class="actions">
+    <button id="a-lights" class="primary">Lights off</button>
+    <button id="a-reset">Reset view</button>
+    <button id="a-takeoff">747 take-off</button>
+    <button id="a-sound" aria-pressed="false">Sound off</button>
+    <button id="a-q">Quality: high</button>
+    <button id="a-glb" hidden>Export GLB</button>
+  </div>
+  <div class="meters mono">
+    <span>GLOW</span><span class="bar"><i id="m-glow"></i></span><span id="m-glow-v">0%</span>
+    <span>FOCUS</span><span class="bar"><i id="m-focus"></i></span><span id="m-focus-v">—</span>
+    <label for="hz">DEHAZE</label><input id="hz" type="range" min="0" max="200" step="1" value="150" aria-label="Dehaze, percent"><span id="hz-v">150%</span>
+  </div>
+</div>
+
+<div id="tip" class="mono"></div>
+<div id="err" class="mono" hidden></div>
+<div id="loader"><div class="mono" style="text-align:center;color:rgba(239,236,230,.72)"><div class="flame"></div>BUILDING::TEXTURES</div></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "/3d-map/vendor/three/build/three.module.js",
+  "three/addons/": "/3d-map/vendor/three/addons/",
+  "gmc-kit": "../../shared/gmc-kit.js",
+  "gmc-people": "../../shared/gmc-people.js",
+  "gmc-component-mode": "../../shared/gmc-component-mode.js"
+} }
+</script>
+<script type="module">
+// ═══════════════════════════════════════════════════════════════════════════
+// GMC · O1 Gelephu International Airport · v03: v02 in the masterplan-map environment (near-flat dark-teal ground with a block texture, scattered lights, no trees, no mountains or sky; opens in Dusk at the Apron view). Built from the plaster → haze → bare → teal mockups (models/mockups); some of their code is inert here (mountain layers off, dehaze control hidden). v02 = (v01 + aircraft: A321 ×2, Boeing 747-200; view switcher; 747 take-off)
+// Built on shared/gmc-kit.js (design.md). Units: metres. North = −Z, so the
+// landside facade faces +Z (south). Root: gmc_obj_o1-airport.
+// Form after BIG's published renders (references/big/airport-front-elevation.png):
+// a row of interlocking timber gables whose glulam diagonals form a diamond
+// lattice (diamond 24 m × 14.4 m, members at ~31°), glazed and lit warm.
+// Peak heights and gable count are our reading of the image, not survey data.
+// ═══════════════════════════════════════════════════════════════════════════
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { createPeople } from 'gmc-people';
+import { createDirector, isEmbedded } from 'gmc-component-mode';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { prepareTextures, createStage, createTrees, createGrass, createRocks, createWaterSurface, addWaterObstacles, enableWaterReflections, createReeds, createBroadLeaves, createSkirt, createNoise, wetBanks, metricUV, scaleUV, variant, MOODS, KIT_VERSION, sunDirection, countTriangles, exportGLB } from 'gmc-kit';
+
+const $ = id => document.getElementById(id);
+const EMBED = isEmbedded();   // inside the UI shell (?embed=1): no own chrome, golden, the shell drives the camera
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+try {
+  // let the loader paint (timer fallback: background tabs get no animation frames)
+  await Promise.race([new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))), new Promise(r => setTimeout(r, 120))]);
+
+  // ─────────────────────────────────────────────────────────── renderer + kit
+  await prepareTextures({ quality: 'high' });                   // kit 1.9.0: textures from cache or parallel workers, not ~10 s on this thread
+  const stage = createStage({ container: $('stage'), mood: 'dusk' });
+  stage.controls.dispose();                                     // this view has its own fixed-angle camera rig
+  const M = stage.materials, camera = stage.camera, renderer = stage.renderer;
+
+  // ─────────────────────────────────────────────────────────── form parameters
+  const W = 24, S = .6, HU = S * W / 2;                         // diamond width, slope (≈31°), half-unit height 7.2 m
+  const D = 72, ZF = D / 2, ZB = -D / 2;                        // hall depth; front (landside) and back planes
+  // gables: [lattice column u (×12 m), height in half-units]. Parity keeps every edge on the lattice.
+  const TENTS = [[-18, 2], [-11, 3], [-6, 4], [0, 4], [5, 3], [9, 3], [12, 2], [18, 2], [23, 1]]
+    .map(([u, n], id) => ({ id, x: u * 12, n, h: n * HU, half: n * 12 }));
+  const tentY = (t, x) => t.h - S * Math.abs(x - t.x);
+  const bodies = [];
+  for (const t of [...TENTS].sort((a, b) => a.x - b.x)) {
+    const last = bodies[bodies.length - 1];
+    if (last && t.x - t.half < last.R - 1e-6) { last.tents.push(t); last.R = Math.max(last.R, t.x + t.half); }
+    else bodies.push({ tents: [t], L: t.x - t.half, R: t.x + t.half });
+  }
+  const topOf = (b, x) => Math.max(...b.tents.map(t => tentY(t, x)));
+  const domOf = (b, x) => b.tents.reduce((best, t) => tentY(t, x) > tentY(best, x) ? t : best, b.tents[0]);
+  const bodyAt = x => bodies.find(b => x >= b.L && x <= b.R);
+  const topAt = x => { const b = bodyAt(x); return b ? topOf(b, x) : -Infinity; };
+  const moduleAt = (x, y) => { const b = bodyAt(x); if (!b || y < 0 || y > topOf(b, x)) return null; return domOf(b, x); };
+
+  // ─────────────────────────────────────────────────────────── materials
+  const mem = M.M_glulam;                                                          // dark-stained glulam with visible lamellae
+  const lanternGlow = variant(M.M_window_glow, {});
+  const glass = variant(M.M_glass, { transparent: true, opacity: .22, depthWrite: false });
+  const glassInt = variant(M.M_glass, { transparent: true, opacity: .32, depthWrite: false });
+  // interior timber picks up a little of the hall's warm light (fake bounce instead of many point lights)
+  const intTimber = variant(M.M_timber_cedar, { emissive: new THREE.Color(0xffa45a), emissiveIntensity: 0 });
+  const intTimberDark = variant(M.M_timber_dark, { emissive: new THREE.Color(0xff9a50), emissiveIntensity: 0 });
+  const intFloor = variant(M.M_stone_masonry, { emissive: new THREE.Color(0xffb36b), emissiveIntensity: 0 });
+  const deckGlow = variant(M.M_window_glow, {});
+  // vertical emissive gradient for the lit interior back wall (brighter towards the timber ceiling)
+  const gradCanvas = document.createElement('canvas'); gradCanvas.width = 4; gradCanvas.height = 256;
+  { const g = gradCanvas.getContext('2d'), lg = g.createLinearGradient(0, 256, 0, 0);
+    lg.addColorStop(0, '#5a3418'); lg.addColorStop(.35, '#c9772f'); lg.addColorStop(.75, '#ffc46e'); lg.addColorStop(1, '#fff0d2');
+    g.fillStyle = lg; g.fillRect(0, 0, 4, 256); }
+  const gradTex = new THREE.CanvasTexture(gradCanvas); gradTex.colorSpace = THREE.SRGBColorSpace;
+  gradTex.wrapS = THREE.RepeatWrapping; gradTex.wrapT = THREE.ClampToEdgeWrapping; gradTex.repeat.set(.01, 1 / 30);
+
+  // one material set per gable so each can be lit on its own
+  // each gable glows a little differently, like real rooms (vary), and its ceiling dims towards the back (battenB)
+  const VARY = [1, .9, 1.07, 1, .94, 1.08, .88, 1.04, .95];
+  const MOD = TENTS.map(t => ({
+    ...t, level: 0, vel: 0, target: 0, hover: 0, vary: VARY[t.id],
+    wall: variant(M.M_timber_cedar, { emissive: new THREE.Color(0xffb062), emissiveMap: gradTex, emissiveIntensity: 0 }),
+    batten: variant(M.M_timber_cedar, { emissive: new THREE.Color(0xffbf73), emissiveIntensity: 0 }),
+    battenB: variant(M.M_timber_cedar, { emissive: new THREE.Color(0xffa95c), emissiveIntensity: 0 }),
+    glow: variant(M.M_window_glow, {}),
+  }));
+
+  // ─────────────────────────────────────────────────────────── geometry helpers
+  const ni = g => g.index ? g.toNonIndexed() : g;
+  const bins = new Map();
+  const put = (key, g) => { if (!bins.has(key)) bins.set(key, []); bins.get(key).push(ni(g)); };
+  const flush = (key, mat, parent, name, { cast = true } = {}) => {
+    const list = bins.get(key); if (!list?.length) return null;
+    const m = new THREE.Mesh(mergeGeometries(list, false), mat); m.name = name; m.castShadow = cast; m.receiveShadow = true;
+    parent.add(m); bins.delete(key); return m;
+  };
+  const rbox = (w, h, d, r = .06, seg = 2, along = null) => metricUV(new RoundedBoxGeometry(w, h, d, seg, Math.min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3)), { along });
+  const bx = (w, h, d, along = null) => metricUV(new THREE.BoxGeometry(w, h, d), { along });
+  const at = (g, x, y, z, rz = 0, ry = 0, rx = 0) => { if (rx) g.rotateX(rx); if (rz) g.rotateZ(rz); if (ry) g.rotateY(ry); return g.translate(x, y, z); };
+  const UP = new THREE.Vector3(0, 1, 0);
+  const rod = (a, b, r0, r1 = r0, seg = 10) => {
+    const len = a.distanceTo(b), g = scaleUV(new THREE.CylinderGeometry(r1, r0, len, seg), 2 * Math.PI * r0, len);
+    const q = new THREE.Quaternion().setFromUnitVectors(UP, b.clone().sub(a).normalize());
+    return ni(g).applyMatrix4(new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(.5), q, new THREE.Vector3(1, 1, 1)));
+  };
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const dedupe = pts => pts.filter((p, i) => i === 0 || p.distanceTo(pts[i - 1]) > 1e-4);
+  const rnd = (() => { let a = 7331; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();
+  /** x-intervals of a body where top(x) ≥ y + clear (sampled every 0.25 m) */
+  const runs = (b, y, clear = 0, step = .25) => {
+    const out = []; let s = null;
+    for (let x = b.L; x <= b.R + 1e-6; x += step) {
+      const ok = topOf(b, x) >= y + clear;
+      if (ok && s === null) s = x; if (!ok && s !== null) { out.push([s, x - step]); s = null; }
+    }
+    if (s !== null) out.push([s, b.R]); return out;
+  };
+  /** split [a,b] into pieces by the gable that dominates each part */
+  const byModule = (body, a, b) => {
+    const out = []; let s = a, cur = domOf(body, a + .01);
+    for (let x = Math.ceil(a / 6) * 6; x < b; x += 6) {
+      const d = domOf(body, Math.min(b, x + .01)); if (d !== cur && x > s) { out.push([s, x, cur]); s = x; cur = d; }
+    }
+    out.push([s, b, cur]); return out;
+  };
+  /** profile vertices of a body's envelope at its 6 m breakpoints, collinear runs merged */
+  const roofSegments = b => {
+    const pts = []; for (let x = b.L; x <= b.R + 1e-6; x += 6) pts.push([x, Math.max(0, topOf(b, x))]);
+    const segs = []; let a = pts[0];
+    for (let i = 1; i < pts.length; i++) {
+      const p = pts[i], nx = pts[i + 1];
+      const s1 = (p[1] - a[1]) / (p[0] - a[0]), s2 = nx ? (nx[1] - p[1]) / (nx[0] - p[0]) : NaN;
+      if (!nx || Math.abs(s1 - s2) > 1e-6) { segs.push([a[0], a[1], p[0], p[1]]); a = p; }
+    }
+    return segs;
+  };
+
+  // ─────────────────────────────────────────────────────────── model groups (design.md §9.3)
+  let planesTick = null, takeOff = () => {};
+  const PLANE_CFG = { a321Yaw: 0, b747Yaw: Math.PI };   // the 747 file's nose points the other way
+  const root = new THREE.Group(); root.name = 'gmc_obj_o1-airport';
+  const G = n => { const g = new THREE.Group(); g.name = n; root.add(g); return g; };
+  const Lstruct = G('L_structure'), Lroof = G('L_roof'), Lglaze = G('L_glazing'), Lint = G('L_interior'),
+        Lglow = G('L_glow'), Lbase = G('L_plinth'), Lcanopy = G('L_canopy'), Ldeck = G('L_deck');   // podium = the object's plinth (§8.3)
+  // yield between heavy build steps, so the UI shell's welcome screen keeps animating while this builds
+  const breathe = () => new Promise(r => (globalThis.scheduler?.yield ? scheduler.yield().then(r) : setTimeout(r, 0)));
+  const T0 = performance.now(), lap = n => console.info(`[O1] ${n}: +${(performance.now() - T0).toFixed(0)} ms (page ${(performance.now() / 1000).toFixed(1)} s)`);
+  lap('kit + textures ready');
+
+  // ─────────────────────────────────────────────────────────── 1 · diagrid (glulam members + steel nodes)
+  const nodeSet = new Map(); const nodeKey = (a, b) => a + ':' + b;
+  const inside = (x, y) => { const t = topAt(x); return y >= -1e-6 && y <= t + 1e-4; };
+  const onEdge = (x, y) => Math.abs(topAt(x) - y) < 1e-4;
+  const SEG = Math.hypot(12, HU), ANG = Math.atan2(HU, 12);
+  for (const b of bodies) {
+    for (let a = Math.ceil(b.L / 12); a <= Math.floor(b.R / 12); a++) {
+      for (let k = 0; k <= 8; k++) {
+        if ((a - k) % 2) continue;
+        const x = a * 12, y = k * HU; if (!inside(x, y)) continue;
+        for (const dir of [1, -1]) {                               // +: rising member, −: falling member
+          const x2 = x + 12, y2 = y + dir * HU;
+          if (y2 < -1e-6 || x2 > b.R + 1e-6 || !inside(x2, y2) || !inside(x + 6, y + dir * HU / 2)) continue;
+          const edge = onEdge(x + 6, y + dir * HU / 2);
+          // members run 0.35 m past each node so joints overlap, except where they land on the ground
+          const e1 = y < 1e-6 ? 0 : .35, e2 = y2 < 1e-6 ? 0 : .35, shift = (e2 - e1) / 2;
+          // deep glulam: 2.2 m (edges 2.6 m) front-to-back, so the lattice casts real shadows onto the recessed glass
+          const g = rbox(SEG + e1 + e2, edge ? 1.15 : 1.0, edge ? 2.6 : 2.2, .12, 2, 'x');
+          put(edge ? 'memEdge' : 'mem', at(g, x + 6 + Math.cos(ANG) * shift, y + dir * HU / 2 + dir * Math.sin(ANG) * shift, ZF + 1.6, dir * ANG));
+          // inner secondary lattice 3.2 m behind the glass: thinner, seen as a silhouette against the lit hall
+          if (!edge) put('memIn', at(bx(SEG + .3, .42, .55, 'x'), x + 6, y + dir * HU / 2, ZF - 3.2, dir * ANG));
+          nodeSet.set(nodeKey(a, k), [x, y]); nodeSet.set(nodeKey(a + 1, k + dir), [x2, y2]);
+        }
+      }
+    }
+    // sill beam along the ground line
+    put('mem', at(rbox(b.R - b.L, .8, 2.2, .1, 2, 'x'), (b.L + b.R) / 2, .4, ZF + 1.6));
+  }
+  flush('mem', mem, Lstruct, 'diagrid_members'); flush('memEdge', mem, Lstruct, 'diagrid_edge_members');
+  flush('memIn', mem, Lstruct, 'diagrid_inner_layer');
+  // node plates + bolts (instanced)
+  const nodes = [...nodeSet.values()];
+  const plateGeo = new THREE.CylinderGeometry(.78, .78, .28, 28).rotateX(Math.PI / 2);
+  const boltGeo = new THREE.CylinderGeometry(.075, .075, .16, 8).rotateX(Math.PI / 2);
+  const plates = new THREE.InstancedMesh(plateGeo, M.M_steel_dark, nodes.length); plates.name = 'node_plates';
+  const bolts = new THREE.InstancedMesh(boltGeo, M.M_steel_dark, nodes.length * 6); bolts.name = 'node_bolts';
+  { const d = new THREE.Object3D(); nodes.forEach(([x, y], i) => {
+      d.position.set(x, Math.max(y, .55), ZF + 2.85); d.rotation.set(0, 0, 0); d.updateMatrix(); plates.setMatrixAt(i, d.matrix);
+      for (let j = 0; j < 6; j++) { const a = j / 6 * Math.PI * 2 + .26; d.position.set(x + Math.cos(a) * .5, Math.max(y, .55) + Math.sin(a) * .5, ZF + 3.05); d.updateMatrix(); bolts.setMatrixAt(i * 6 + j, d.matrix); }
+  }); }
+  Lstruct.add(plates, bolts);
+
+  // ─────────────────────────────────────────────────────────── 2 · glazing (glass + mullions + transoms)
+  for (const b of bodies) {
+    const pts = []; for (let x = b.L + 6; x <= b.R - 6 + 1e-6; x += 6) pts.push(new THREE.Vector2(x, Math.max(0, topOf(b, x))));
+    const shape = new THREE.Shape(dedupe([new THREE.Vector2(b.L, 0), ...pts, new THREE.Vector2(b.R, 0)]));
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(shape).translate(0, 0, ZF), glass); m.name = 'glass_front'; m.castShadow = false; m.renderOrder = 2; Lglaze.add(m);
+    for (let x = b.L + 1.2; x < b.R; x += 2.4) { const h = topOf(b, x) - .35; if (h > .8) put('mull', at(bx(.1, h, .16), x, h / 2, ZF + .12)); }
+    for (let y = 3.6; y < 30; y += 3.6) for (const [a, c] of runs(b, y, .3)) if (c - a > .5) put('mull', at(bx(c - a, .12, .2), (a + c) / 2, y, ZF + .12));
+  }
+  flush('mull', M.M_steel_dark, Lglaze, 'mullions_transoms');
+
+  // ─────────────────────────────────────────────────────────── 3 · roof (shingled planes, ridges, gutters)
+  const allSegs = [];
+  for (const b of bodies) for (const s of roofSegments(b)) {
+    const [x1, y1, x2, y2] = s, len = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1);
+    const nx = -Math.sin(ang), ny = Math.cos(ang);
+    // eaves overhang 3.8 m so the roof edge projects past the deep diagrid
+    put('roof', at(rbox(len + .35, 1.0, D + 7.6, .18, 2, 'z'), (x1 + x2) / 2 + nx * .5, (y1 + y2) / 2 + ny * .5, 0, ang));
+    // glulam ribs running down the slope every 4 m: texture and rhythm on the roof planes
+    for (let z = ZB - 1.8; z <= ZF + 1.9; z += 4)
+      put('raft', at(bx(len, .3, .28, 'x'), (x1 + x2) / 2 + nx * 1.15, (y1 + y2) / 2 + ny * 1.15, z, ang));
+    allSegs.push({ b, x1, y1, x2, y2, len, ang, nx, ny });
+  }
+  flush('roof', M.M_slate_roof, Lroof, 'roof_planes'); flush('raft', mem, Lroof, 'roof_ribs');
+  for (const t of TENTS) put('ridge', at(rod(V(t.x, t.h + 1.15, ZB - 3.9), V(t.x, t.h + 1.15, ZF + 3.9), .42, .42, 14), 0, 0, 0));
+  flush('ridge', mem, Lroof, 'ridge_caps');
+  for (const b of bodies) for (let x = b.L + 6; x < b.R; x += 6) {
+    const y = topOf(b, x), l = topOf(b, x - 6), r = topOf(b, x + 6);
+    if (y < l && y < r) put('gutter', at(rbox(1.1, .45, D + 8, .08, 1), x, y + 1.05, 0));
+  }
+  flush('gutter', M.M_steel_dark, Lroof, 'valley_gutters');
+
+  // ─────────────────────────────────────────────────────────── 4 · interior (lit timber hall)
+  for (const b of bodies) {
+    // hall floor finished 3 cm above the podium top, so the two never share a plane (z-fighting)
+    put('floor', at(rbox(b.R - b.L - 1, .3, D - 1.5, .05, 1), (b.L + b.R) / 2, -.12, 0));
+    // back wall, one piece per gable, glowing timber
+    let s = b.L, cur = domOf(b, b.L + .01);
+    const flushWall = (a, c, t) => {
+      const pts = [new THREE.Vector2(a, 0)]; for (let x = a; x <= c + 1e-6; x += 6) pts.push(new THREE.Vector2(x, Math.max(0, topOf(b, x))));
+      pts.push(new THREE.Vector2(c, 0));
+      put('wall' + t.id, new THREE.ShapeGeometry(new THREE.Shape(dedupe(pts))).translate(0, 0, ZB + 1.6));
+    };
+    for (let x = b.L + 6; x <= b.R + 1e-6; x += 6) { const d = domOf(b, Math.min(x, b.R) - .01); if (d !== cur) { flushWall(s, x - 6, cur); s = x - 6; cur = d; } }
+    flushWall(s, b.R, cur);
+  }
+  flush('floor', intFloor, Lint, 'hall_floor');
+  // slatted timber ceiling: battens parallel to the facade, following the roof profile 2.1 m below it,
+  // clipped where the roof comes down near the ground (keep ≥ 3 m clear)
+  for (const sg of allSegs) {
+    let ax = sg.x1 - sg.nx * 2.1, ay = sg.y1 - sg.ny * 2.1, cx = sg.x2 - sg.nx * 2.1, cy = sg.y2 - sg.ny * 2.1;
+    const MIN = 3; if (ay < MIN && cy < MIN) continue;
+    if (ay < MIN) { const f = (MIN - ay) / (cy - ay); ax += (cx - ax) * f; ay = MIN; }
+    if (cy < MIN) { const f = (MIN - cy) / (ay - cy); cx += (ax - cx) * f; cy = MIN; }
+    const len = Math.hypot(cx - ax, cy - ay); if (len < 1) continue;
+    const t = domOf(sg.b, (sg.x1 + sg.x2) / 2);
+    // front half of the hall lit brighter than the back half: the ceiling reads as receding
+    for (let z = ZF - 2.4; z > ZB + 2.5; z -= 1.6)
+      put((z > 0 ? 'batF' : 'batB') + t.id, at(bx(len, .16, .42, 'x'), (ax + cx) / 2, (ay + cy) / 2, z, sg.ang));
+  }
+  // lit soffit slats under the 3.8 m eaves (a warm line along the top edge of every gable)
+  for (const sg of allSegs) {
+    const t = domOf(sg.b, (sg.x1 + sg.x2) / 2), mx = (sg.x1 + sg.x2) / 2 - sg.nx * .22, my = (sg.y1 + sg.y2) / 2 - sg.ny * .22;
+    if (Math.max(sg.y1, sg.y2) < 3) continue;
+    for (const z of [ZF + .7, ZF + 1.5, ZF + 2.3, ZF + 3.1]) put('batF' + t.id, at(bx(sg.len - .4, .12, .32, 'x'), mx, my, z, sg.ang));
+  }
+  // vertical timber fins lining the lit back wall (gives the glow a slatted texture up close)
+  for (const b of bodies) for (let x = b.L + 1.8; x < b.R - 1.2; x += 1.2) {
+    const h = topOf(b, x) - 2.6; if (h < 2) continue;
+    put('batB' + domOf(b, x).id, at(bx(.14, h, .5, 'y'), x, h / 2, ZB + 2.05));
+  }
+  // mezzanines with glowing edge strips and glass balustrades
+  const mezFront = ZF - 5;   // slab edges close to the glass: they read as horizontal bands, like the reference
+  for (const b of bodies) for (const y of [7.2, 14.4, 21.6]) for (const [a0, c0] of runs(b, y, 5.4)) {
+    const a = a0 + 2.5, c = c0 - 2.5; if (c - a < 14) continue;
+    const dz = mezFront - (ZB + 2);
+    put('slab', at(rbox(c - a, .55, dz, .05, 1, 'x'), (a + c) / 2, y - .275, (mezFront + ZB + 2) / 2));
+    put('balG', at(bx(c - a, 1.05, .04), (a + c) / 2, y + .55, mezFront - .1));
+    put('rail', at(bx(c - a, .07, .08), (a + c) / 2, y + 1.1, mezFront - .1));
+    put('mfas', at(rbox(c - a, 1.0, .35, .05, 1, 'x'), (a + c) / 2, y - .5, mezFront + .18));
+    for (const [p, q, t] of byModule(b, a, c)) put('glow' + t.id, at(new THREE.BoxGeometry(q - p, .1, .05), (p + q) / 2, y - 1.1, mezFront + .2));
+  }
+  flush('slab', intTimber, Lint, 'mezzanines'); flush('mfas', mem, Lint, 'mezzanine_fascias');
+  flush('balG', glassInt, Lint, 'balustrade_glass', { cast: false });
+  flush('rail', M.M_steel_dark, Lint, 'balustrade_rails');
+  // tree columns: trunk + four branches into the slatted ceiling
+  for (const b of bodies) for (let x = Math.ceil(b.L / 24) * 24; x <= b.R; x += 24) {
+    if (topOf(b, x) < 20) continue;
+    for (const z of [-10, 12]) {
+      const yT = topOf(b, x) - 9;
+      put('col', rod(V(x, 0, z), V(x, yT, z), .75, .55, 18));
+      for (const [dx, dz] of [[-6, -5], [6, -5], [-6, 5], [6, 5]]) {
+        const tx = x + dx; put('col', rod(V(x, yT - .3, z), V(tx, Math.max(yT, topAt(tx) - 2.2), z + dz), .34, .22, 10));
+      }
+    }
+  }
+  flush('col', intTimber, Lint, 'tree_columns');
+  // check-in islands: timber counters, glowing desk light, lit backdrop panels
+  for (const b of bodies) for (let x = Math.ceil((b.L - 12) / 24) * 24 + 12; x <= b.R - 12; x += 24) {
+    if (topOf(b, x) < 16) continue; const t = domOf(b, x);
+    put('counter', at(rbox(9, 1.1, 1.8, .08, 2, 'x'), x, .55, 3));
+    put('wall' + t.id, at(rbox(9, 3.4, .3, .05, 1, 'x'), x, 1.7, 1.4));
+    put('glow' + t.id, at(new THREE.BoxGeometry(8.6, .05, .25), x, 1.13, 3.6));
+  }
+  flush('counter', intTimberDark, Lint, 'checkin_counters');
+  // hanging lanterns at four depths (parallax layers through the glass), on steel cords
+  { const spots = [];
+    for (const b of bodies) for (let x = b.L + 10; x < b.R - 10; x += 8) {
+      const t = topOf(b, x); if (t < 16) continue;
+      [-24, -9, 6, 20].forEach((z, j) => spots.push([x + (j % 2) * 4, t - 6.2 - ((Math.round(x) + j * 5) % 3) * .9, z, t - 2.2]));
+    }
+    const d = new THREE.Object3D(), n = spots.length;
+    const body = new THREE.InstancedMesh(new THREE.CylinderGeometry(.4, .5, 1.1, 8), lanternGlow, n); body.name = 'lanterns_glow';
+    const cap = new THREE.InstancedMesh(new THREE.CylinderGeometry(.62, .62, .14, 8).translate(0, .62, 0), M.M_steel_dark, n); cap.name = 'lantern_caps';
+    const cord = new THREE.InstancedMesh(new THREE.CylinderGeometry(.025, .025, 1, 4).translate(0, .5, 0), M.M_steel_dark, n); cord.name = 'lantern_cords';
+    spots.forEach(([x, y, z, ceil], i) => {
+      d.position.set(x, y, z); d.scale.set(1, 1, 1); d.updateMatrix(); body.setMatrixAt(i, d.matrix); cap.setMatrixAt(i, d.matrix);
+      d.position.set(x, y + .69, z); d.scale.set(1, Math.max(.1, ceil - y - .69), 1); d.updateMatrix(); cord.setMatrixAt(i, d.matrix);
+    });
+    Lglow.add(body); Lint.add(cap, cord); }
+  // indoor trees in stone planters (organic texture against the timber)
+  { const spots = [];
+    for (const b of bodies) for (let x = Math.ceil(b.L / 30) * 30 + 15; x < b.R - 10; x += 30) {
+      if (topOf(b, x) < 13) continue;
+      for (const z of [17, -16]) { put('planter', at(rbox(3.8, .9, 3.8, .12, 2), x, .45, z)); spots.push({ x, y: .9, z, height: 7 + rnd() * 1.5, species: 'broadleaf', lod: 0 }); }
+    }
+    flush('planter', M.M_stone_masonry, Lint, 'planters');
+    Lint.add(createTrees(M, spots, { name: 'indoor_trees' })); }   // kit trees (1.4.0): real branching + leaf clusters
+  // per-gable meshes
+  for (const m of MOD) {
+    flush('wall' + m.id, m.wall, Lint, `lit_wall_g${m.id}`);
+    flush('batF' + m.id, m.batten, Lint, `ceiling_battens_front_g${m.id}`);
+    flush('batB' + m.id, m.battenB, Lint, `ceiling_battens_back_g${m.id}`);
+  }
+  // people (kit 1.7.0): travellers in gho, kira and everyday clothes; forest-LOD bodies keep the terminal in budget
+  { const list = [];
+    for (const b of bodies) for (let i = 0; i < (b.R - b.L) * .45; i++) {
+      const x = b.L + 8 + rnd() * (b.R - b.L - 16); if (topAt(x) < 6) continue;
+      const lv = [0, 7.2, 14.4][Math.floor(rnd() * 3)];
+      if (lv > 0 && runs(b, lv, 5.4).every(([a, c]) => x < a + 3 || x > c - 3)) continue;
+      const u = rnd(), walk = u < .45;
+      list.push({ x, y: lv, z: lv > 0 ? ZB + 4 + rnd() * (mezFront - ZB - 6) : -20 + rnd() * 50, pose: walk ? 'walk' : u < .75 ? 'stand' : 'talk',
+        yaw: walk ? (rnd() < .5 ? Math.PI / 2 : -Math.PI / 2) + (rnd() - .5) * .5 : undefined, child: rnd() < .1,
+        outfit: rnd() < .35 ? 'modern' : undefined, bag: walk && rnd() < .4 });   // an airport: more everyday clothes, travellers with backpacks
+    }
+    Lint.add(createPeople(M, list, { name: 'people', lod: 1, seed: 19 })); }
+
+  // ─────────────────────────────────────────────────────────── 5 · base (stone podium)
+  for (const b of bodies) put('podium', at(rbox(b.R - b.L + 8, 1.4, D + 16, .1, 2), (b.L + b.R) / 2, -.7, 4));
+  flush('podium', M.M_stone_masonry, Lbase, 'podium');
+
+  // ─────────────────────────────────────────────────────────── 6 · entrance canopy + revolving doors
+  { const a = -150, c = -40, zc = ZF + 7.5;
+    put('canopy', at(rbox(c - a, .6, 11, .08, 2, 'x'), (a + c) / 2, 6.2, zc));
+    put('fascia', at(rbox(c - a + .4, 1.0, .4, .06, 2, 'x'), (a + c) / 2, 6.1, zc + 5.6));
+    for (let x = a + 5; x <= c - 5; x += 10.5) put('cstl', rod(V(x, 0, ZF + 12), V(x, 5.9, ZF + 12), .19, .19, 12));
+    for (let x = a + 3; x <= c - 3; x += 5) for (const z of [zc - 2.5, zc + 2.5]) { const t = moduleAt(x, 3) ?? TENTS[1];
+      put('glow' + t.id, at(new THREE.CircleGeometry(.34, 20), x, 5.88, z, 0, 0, Math.PI / 2)); }
+    for (const x of [-132, -108, -84, -60]) {
+      put('drum', at(new THREE.CylinderGeometry(1.7, 1.7, 2.7, 32, 1, true), x, 1.35, ZF + .9));
+      put('dcap', at(new THREE.CylinderGeometry(1.85, 1.85, .34, 32), x, 2.87, ZF + .9));
+      put('dcap', at(new THREE.CylinderGeometry(.07, .07, 2.7, 8), x, 1.35, ZF + .9));
+      for (let k = 0; k < 4; k++) put('drum', at(new THREE.BoxGeometry(1.62, 2.55, .035), x + Math.cos(k * Math.PI / 2 + .4) * .8, 1.33, ZF + .9 + Math.sin(k * Math.PI / 2 + .4) * .8, 0, -(k * Math.PI / 2 + .4)));
+    }
+  }
+  flush('canopy', M.M_timber_cedar, Lcanopy, 'canopy_slab'); flush('fascia', mem, Lcanopy, 'canopy_fascia');
+  flush('cstl', M.M_steel_dark, Lcanopy, 'canopy_columns'); flush('drum', glassInt, Lcanopy, 'revolving_doors_glass', { cast: false });
+  flush('dcap', M.M_steel_dark, Lcanopy, 'revolving_doors_frame');
+
+  // ─────────────────────────────────────────────────────────── 7 · raised forecourt deck (right half)
+  { const a = -6, c = 330, z0 = ZF + 16, z1 = ZF + 34, top = 4.4, xm = (a + c) / 2;
+    put('deck', at(rbox(c - a, 1.5, z1 - z0, .1, 2, 'x'), xm, top - .75, (z0 + z1) / 2));
+    put('dfas', at(rbox(c - a + .4, 1.8, .38, .06, 2, 'x'), xm, top - .8, z1 + .12));
+    // vertical glulam louvres over the fascia (0.6 m rhythm)
+    for (let x = a + .3; x < c; x += .6) put('louv', at(bx(.12, 1.9, .3, 'y'), x, top - .8, z1 + .46));
+    for (let x = a + 6; x < c; x += 24) put('pier', at(rbox(1.4, top - 1.5, 7, .2, 2), x, (top - 1.5) / 2, (z0 + z1) / 2));   // stand on ground (y 0)
+    for (let x = a + 1; x < c; x += 2.4) put('rail', at(bx(.07, 1.1, .07), x, top + .55, z1 - .3));
+    put('rail', at(bx(c - a, .08, .1), xm, top + 1.1, z1 - .3));
+    for (let x = a + 12; x < c; x += 24) {
+      put('pole', rod(V(x, top, z1 - 1), V(x, top + 7.6, z1 - 1), .15, .1, 10));
+      put('pole', at(bx(.12, .12, 2.6), x, top + 7.6, z1 - 2.2));
+      put('pole', at(rbox(.5, .16, 1.2, .04, 1), x, top + 7.5, z1 - 3.4));
+      put('dglow', at(new THREE.PlaneGeometry(.42, 1.05), x, top + 7.41, z1 - 3.4, 0, 0, Math.PI / 2));
+    }
+    for (let x = a + 3; x < c; x += 6) put('dglow', at(new THREE.CircleGeometry(.28, 16), x, top - 1.52, z1 - 2, 0, 0, Math.PI / 2));
+    put('dglow', at(new THREE.BoxGeometry(c - a, .06, .04), xm, top - 1.8, z1 + .3));
+  }
+  flush('deck', M.M_stone_masonry, Ldeck, 'deck_slab'); flush('dfas', M.M_timber_dark, Ldeck, 'deck_fascia');
+  flush('louv', mem, Ldeck, 'deck_louvres');
+  flush('pier', M.M_stone_masonry, Ldeck, 'deck_piers'); flush('rail', M.M_steel_dark, Ldeck, 'deck_railing');
+  flush('pole', M.M_steel_dark, Ldeck, 'deck_light_poles');
+
+  // glow meshes last (all into L_glow)
+  for (const m of MOD) flush('glow' + m.id, m.glow, Lglow, `glow_g${m.id}`, { cast: false });
+  flush('dglow', deckGlow, Lglow, 'deck_lights', { cast: false });
+
+  await breathe(); lap('geometry built');
+
+  // ─────────────────────────────────────────────────────────── 7b · PREVIEW CONTEXT: valley-floor landscape (not part of the model)
+  // After references/big/render-airport-dusk.jpg: the terminal sits low in a scrub meadow at the foot of forested hills;
+  // a stony braided stream passes under the raised forecourt deck and under the raised runway behind the terminal
+  // ("runway raised across several rivers"). On the map these come from M1 terrain and the E-kits.
+
+  // ─────────────────────────────────────────────────────────── MOCKUP · plaster relief (after the GMC plaster-model sheet)
+  // Plaster #DCDCDA, zones #A3A7AD, mist #D6DCE6 / horizon #ECEEF2, zenith #7FA3D6. Baked low sun from the north-west (18°),
+  // three drifting blue-grey cloud-shadow layers (strength .7, never black), relief fading into a mist floor and the horizon.
+  // Applies to the landscape only: the terminal, runway, apron, road, water and aircraft keep their own materials.
+  const PLASTER = { base: 0xdcdcda, zone: 0xa3a7ad, mist: 0xd6dce6, horizon: 0xeceef2, zenith: 0x7fa3d6 };
+  const plasterU = { uTime: { value: 0 }, uAerial: { value: .82 }, uBlocks: { value: 1 }, uMist: { value: new THREE.Color(PLASTER.horizon) }, uSunB: { value: new THREE.Vector3(-.672, .309, -.672).normalize() } };
+  const plasterMat = (color, { mist = false } = {}) => {
+    const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(.38), roughness: .93, metalness: 0 }); m.name = 'M_plaster_backdrop'; m.userData.clay = m;   // stays plaster under the Clay look
+    m.customProgramCacheKey = () => 'plaster' + mist;
+    m.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, plasterU);
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nuniform vec3 uSunB; varying vec3 vPW; varying float vBake; varying float vMist;' + (mist ? '\nattribute float mist;' : ''))
+        .replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+          vec4 pw = vec4(transformed, 1.); vec3 nw = objectNormal;
+          #ifdef USE_INSTANCING
+            pw = instanceMatrix * pw; nw = mat3(instanceMatrix) * nw;
+          #endif
+          vPW = (modelMatrix * pw).xyz; vBake = dot(normalize(mat3(modelMatrix) * nw), uSunB); vMist = ${mist ? 'mist' : '0.'};`);
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', `#include <common>
+          uniform float uTime; uniform float uAerial; uniform float uBlocks; uniform vec3 uMist; varying vec3 vPW; varying float vBake; varying float vMist;
+          float pH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+          float pN(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+            return mix(mix(pH(i), pH(i + vec2(1, 0)), f.x), mix(pH(i + vec2(0, 1)), pH(i + vec2(1, 1)), f.x), f.y); }
+          float pF(vec2 p) { return pN(p) * .55 + pN(p * 2.03 + 7.1) * .3 + pN(p * 4.07 + 3.3) * .15; }`)
+        .replace('#include <color_fragment>', `#include <color_fragment>
+          diffuseColor.rgb *= mix(.36, 1.1, clamp(vBake * 1.7 + .35, 0., 1.));                 // baked plaster shading
+          diffuseColor.rgb *= .975 + .05 * pN(vPW.xz / 2.6);                                     // cast-plaster grain
+          { vec2 bq = vPW.xz / vec2(11., 7.); bq.x += step(1., mod(floor(bq.y), 2.)) * .5;           // map blocks (staggered)
+            vec2 bc = floor(bq), bf = fract(bq);
+            float lit = .84 + .3 * pH(bc + 13.7);
+            lit *= mix(1., .82, clamp(step(bf.x, .07) + step(bf.y, .09), 0., 1.)) * mix(1., 1.08, step(.92, bf.y));
+            lit *= .88 + .24 * pH(floor(vPW.xz / vec2(37., 23.) + 3.3));
+            diffuseColor.rgb *= mix(1., lit, uBlocks); }
+          vec2 q = vPW.xz;                                                                       // cloud shadows drifting east
+          float c = smoothstep(.5, .78, pF((q - vec2(uTime * 9., 0.)) / 430.)) * .5
+                  + smoothstep(.52, .8, pF((q - vec2(uTime * 12., -60.)) / 580. + 3.1)) * .35
+                  + smoothstep(.56, .82, pF((q - vec2(uTime * 6., 90.)) / 240. + 8.7)) * .25;
+          diffuseColor.rgb *= mix(vec3(1.), vec3(.74, .79, .88), clamp(c, 0., 1.) * .7);`)
+        .replace('#include <dithering_fragment>', 'gl_FragColor.rgb = mix(gl_FragColor.rgb, uMist, clamp(max(vMist, uAerial * smoothstep(250., 2600., length(vPW - cameraPosition))), 0., 1.));\n#include <dithering_fragment>');
+    };
+    return m;
+  };
+  const plasterSky = (() => { const c = document.createElement('canvas'); c.width = 8; c.height = 512; const g = c.getContext('2d'), lg = g.createLinearGradient(0, 0, 0, 512);
+    lg.addColorStop(0, '#a9c0e2'); lg.addColorStop(.35, '#d5deea'); lg.addColorStop(.6, '#eceef2'); lg.addColorStop(1, '#eceef2'); g.fillStyle = lg; g.fillRect(0, 0, 8, 512);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  // ridged relief shared by the near foothills (inside the valley slab) and the backdrop
+  const hsh = (i, j) => { let h = Math.imul(i, 374761393) + Math.imul(j, 668265263) ^ 0x5bd1e995; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; };
+  const vn = (x, z) => { const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+    const a = hsh(i, j), b = hsh(i + 1, j), c = hsh(i, j + 1), d = hsh(i + 1, j + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
+  const ridged = (x, z) => { let s = 0, a = 1, f = 1 / 1050, w = 1, n2 = 0;
+    x += 160 * (vn(x / 900 + 5, z / 900) - .5); z += 160 * (vn(x / 900, z / 900 + 9) - .5);
+    for (let o = 0; o < 7; o++) { let n = 1 - Math.abs(vn(x * f + o * 17.3, z * f - o * 9.1) * 2 - 1); n *= n; s += n * a * w; n2 += a; w = clamp(n * 1.7, 0, 1); a *= .6; f *= 2.05; }
+    return s / n2; };
+
+  // ─────────────────────────────────────────────────────────── MOCKUP 2 · blue-hour haze backdrop
+  // After the reference render: dark forested hills, then paler ranges, then snow peaks, each step lost further in blue haze
+  // under a stormy sky. Matte-painting style (unlit vertex colours), so it reads the same in every look and never out-shouts
+  // the lit terminal. Ranges sit well beyond the valley slab (z −900 … −6000).
+  const HZ = { sky0: '#22395a', sky1: '#3c5b82', sky2: '#6f8db0', haze: 0x6d8bab };
+  const hazeSky = (lift = 0) => { const c = document.createElement('canvas'); c.width = 512; c.height = 512; const g = c.getContext('2d');
+    const lg = g.createLinearGradient(0, 0, 0, 512); lg.addColorStop(0, HZ.sky0); lg.addColorStop(.42, HZ.sky1); lg.addColorStop(.62, HZ.sky2); lg.addColorStop(1, HZ.sky2);
+    g.fillStyle = lg; g.fillRect(0, 0, 512, 512);
+    const r = (() => { let a = 99; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
+    g.filter = 'blur(14px)';                                                     // soft storm-cloud banks
+    for (let i = 0; i < 60; i++) { const y = r() * 300, w = 120 + r() * 260, h = 14 + r() * 40;
+      g.fillStyle = r() < .55 ? `rgba(20,34,56,${.12 + r() * .16})` : `rgba(160,184,212,${.06 + r() * .1})`;
+      g.beginPath(); g.ellipse(r() * 512, y, w, h, (r() - .5) * .1, 0, Math.PI * 2); g.fill(); }
+    g.filter = 'none'; if (lift) { g.fillStyle = `rgba(225,232,240,${lift})`; g.fillRect(0, 0, 512, 512); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+  const HAZE_SKY = { dusk: hazeSky(0), golden: hazeSky(.12), day: hazeSky(.3), clay: hazeSky(.3) };
+  const HAZE_K = { dusk: 1, golden: 1.12, day: 1.45, clay: 1.45 };                // backdrop brightness per look
+  const hazeMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false }); hazeMat.name = 'M_haze_backdrop'; hazeMat.userData.clay = hazeMat;
+  const hazeU = { uHazeC: { value: new THREE.Color(HZ.haze) }, uHazeK: { value: 0 }, uClar: { value: .5 } };
+  hazeMat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, hazeU);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float hz; varying float vHz;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvHz = hz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uHazeC; uniform float uHazeK; uniform float uClar; varying float vHz;')
+      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, uHazeC, clamp(vHz * uHazeK, 0., 1.)); float lum = dot(diffuseColor.rgb, vec3(.2126, .7152, .0722)); diffuseColor.rgb = max(mix(vec3(lum), diffuseColor.rgb, 1. + .7 * uClar), 0.); diffuseColor.rgb = max((diffuseColor.rgb - .16) * (1. + .6 * uClar) + .16, 0.) * (1. - .12 * uClar);');
+  };
+  // DEHAZE controller, 0–200 %: 0 % = the first haze mockup, 100 % = no haze, above 100 % = extra clarity
+  // (more contrast and saturation on the ranges, slightly deeper sky), like a photo editor's dehaze
+  const setHaze = p => { p = clamp(+p, 0, 200); const d = p / 100, h = Math.max(0, 1 - d), c = Math.max(0, d - 1);
+    hazeU.uHazeK.value = h; hazeU.uClar.value = c; plasterU.uAerial.value = .82 * h; stage.scene.backgroundIntensity = 1 - .2 * c;
+    $('hz').value = p; $('hz-v').textContent = Math.round(p) + '%'; };
+  $('hz').addEventListener('input', e => setHaze(e.target.value));
+  window.__setHaze = setHaze;
+  const BARE_BG = new THREE.Color(993837);   // map teal
+  const PLASTER_MIST = { day: PLASTER.horizon, clay: PLASTER.horizon, golden: 0xf1dcc2, dusk: 0x2b2a2f };
+  const plasterLook = v => { const k = HAZE_K[v] ?? 1; plasterU.uMist.value.set(HZ.haze).multiplyScalar(k); hazeMat.color.setScalar(k); hazeU.uHazeC.value.set(HZ.haze).multiplyScalar(k); stage.scene.background = BARE_BG; plasterU.uMist.value.copy(BARE_BG); };
+  const context = new THREE.Group(); context.name = '__context_preview_only';
+  { const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+    const { fbm } = createNoise(7331);
+    const X0 = -460, X1 = 500, Z0 = -330, Z1 = 690, WL = -1.9, RZ = -147;   // slab extent (front edge runs under the camera), stream level, runway centre line
+    const RP = new THREE.CatmullRomCurve3([[346, -330], [338, -230], [330, -147], [338, -60], [342, 15], [336, 62], [300, 140], [205, 205], [95, 250], [-15, 300], [-85, 380], [-125, 455], [-150, 540], [-140, 620], [-165, 690]]
+      .map(([x, z]) => V(x, 0, z)), false, 'centripetal').getSpacedPoints(520).map(p => [p.x, p.z]);
+    // nearest point on a polyline via a 25 m bucket grid (exact within 100 m, "far" beyond, which is all the callers need)
+    const nearest = pts => { const C = 25, B = new Map(), key = (i, j) => i * 100003 + j;
+      pts.forEach(([x, z], k) => { const kk = key(Math.floor(x / C), Math.floor(z / C)); if (!B.has(kk)) B.set(kk, []); B.get(kk).push(k); });
+      return (x, z) => { const ci = Math.floor(x / C), cj = Math.floor(z / C); let b = 1e12, bi = -1;
+        for (let i = ci - 4; i <= ci + 4; i++) for (let j = cj - 4; j <= cj + 4; j++) { const l = B.get(key(i, j)); if (l) for (const k of l) { const dx = x - pts[k][0], dz = z - pts[k][1], d = dx * dx + dz * dz; if (d < b) { b = d; bi = k; } } }
+        return bi < 0 ? { d: 999, t: 0 } : { d: Math.sqrt(b), t: bi / (pts.length - 1) }; }; };
+    const riverAt = nearest(RP);
+    const chanW = t => 9 + 3.5 * Math.sin(t * 17), bedW = t => chanW(t) + 8 + 5 * Math.sin(t * 9 + 1);   // stony bed only a little wider than the water
+    const roadPts = new THREE.CatmullRomCurve3([[-12, 62], [-150, 63], [-255, 70], [-330, 115], [-400, 150], [-460, 170]].map(([x, z]) => V(x, 0, z)), false, 'centripetal').getSpacedPoints(160).map(p => [p.x, p.z]);
+    const roadNear = nearest(roadPts), roadD = (x, z) => roadNear(x, z).d;
+    const groundY = (x, z) => {
+      let y = fbm(x / 140, z / 140, 3) * 2.2 + fbm(x / 40, z / 40, 2) * .6;
+      y *= smooth(0, 40, Math.hypot(Math.max(-300 - x, x - 372, 0), Math.max(-192 - z, z - 92, 0)));   // level airport platform (y 0)
+      if (z < -200) y += Math.pow((-z - 200) / 130, 1.5) * 10 * (.7 + .6 * clamp(fbm(x / 170 + 3, 1.7, 3) + .5, 0, 1)) + fbm(x / 60, z / 60, 3) * 3 * clamp((-z - 200) / 60, 0, 1);   // foothills
+      y += Math.pow(clamp((Math.abs(x - 20) - 400) / 80, 0, 1), 1.6) * 8 * clamp((120 - z) / 120, 0, 1);   // gentle swell at the slab sides, under forest
+      const r = riverAt(x, z), w = chanW(r.t), bw = bedW(r.t);
+      const vw = Math.min(10 + Math.max(0, y) * 1.4, 62);              // valley sides widen with the hill height (a V-valley, not a slot); ≤ the 100 m search radius
+      if (r.d < bw + vw) { const bed = -1.25 + fbm(x / 18, z / 18, 3) * .5 - (r.d < w ? 1.5 * (1 - (r.d / w) ** 2) : 0); y = bed + (y - bed) * smooth(bw, bw + vw, r.d); }
+      return y;
+    };
+    const cache = new Map(), gY = (x, z) => { const k = x + ',' + z; let v = cache.get(k); if (v === undefined) { v = groundY(x, z); cache.set(k, v); } return v; };
+    await breathe();
+    { // terrain: meadow + gravel bed, wet banks, skirt
+      const nx = 320, nz = 340, pos = [], uv = [], idxG = [], idxB = [], bedCell = [];
+      for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = X0 + (X1 - X0) * i / nx, z = Z0 + (Z1 - Z0) * j / nz; pos.push(x, gY(x, z), z); uv.push(x, -z); }
+      for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+        const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1, x = X0 + (X1 - X0) * (i + .5) / nx, z = Z0 + (Z1 - Z0) * (j + .5) / nz, r = riverAt(x, z);
+        (r.d < bedW(r.t) + 2 ? idxB : idxG).push(a, c, b, b, c, d);
+      }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      g.setIndex([...idxG, ...idxB]); g.addGroup(0, idxG.length, 0); g.addGroup(idxG.length, idxB.length, 1); g.computeVertexNormals(); wetBanks(g, WL, { band: .6, dark: .58 });
+      { // macro tone variation (patches of drier / lusher meadow) so the 8 m ground texture never reads as a grid
+        const c = g.attributes.color, p = g.attributes.position;
+        for (let i = 0; i < c.count; i++) { const x = p.getX(i), z = p.getZ(i), k = .86 + .26 * clamp(fbm(x / 55 + 11, z / 55, 3) + .5, 0, 1), w = clamp(fbm(x / 23, z / 23 + 4, 2) * 1.5, -.12, .12);
+          c.setXYZ(i, c.getX(i) * k * (1 + w * .6), c.getY(i) * k, c.getZ(i) * k * (1 - w * .4)); }
+      }
+      const m = new THREE.Mesh(g, [plasterMat(2785167), plasterMat(3114386)]); m.name = 'valley_terrain';   // mockup: plaster, river bed in the zone tone context.add(m);
+      const outline = []; for (let x = X0; x < X1; x += 6) outline.push(new THREE.Vector2(x, Z1)); for (let z = Z1; z > Z0; z -= 6) outline.push(new THREE.Vector2(X1, z));
+      for (let x = X1; x > X0; x -= 6) outline.push(new THREE.Vector2(x, Z0)); for (let z = Z0; z < Z1; z += 6) outline.push(new THREE.Vector2(X0, z));
+      // mockup: no skirt, the plaster backdrop runs on under the slab (no strata wall, no gaps at the seam)
+    }
+    await breathe();
+    { // stream surface + its cut faces at the slab edge
+      // the current follows the stream's own course (downstream = north → south along RP)
+      // fast path (load time): the kit asks groundAt then flowAt for the same point, so remember the last river lookup;
+      // more than 60 m from the river the ground is always above the water, so skip the terrain noise there (dry cells)
+      let lx = NaN, lz = NaN, lr = null; const river1 = (x, z) => (x === lx && z === lz ? lr : (lx = x, lz = z, lr = riverAt(x, z)));
+      const waterGround = (x, z) => (river1(x, z).d > 60 ? WL + 5 : gY(x, z));
+      const flowAt = (x, z) => { const r = river1(x, z), i = Math.min(RP.length - 2, Math.round(r.t * (RP.length - 1))); return [RP[i + 1][0] - RP[i][0], RP[i + 1][1] - RP[i][1]]; };
+      context.add(createWaterSurface(M, { x0: -200, x1: 400, z0: Z0, z1: Z1, level: WL, groundAt: waterGround, res: 1.6, deep: 1.1, name: 'stream', flowAt, speed: .95, chop: 1.15, clarity: 1 }));
+      const cutMat = variant(M.M_water, { color: 0x1d3c45, roughness: .3, side: THREE.DoubleSide });
+      for (const z of [Z0, Z1]) { const pos = [], idx = []; let n = 0;
+        for (let x = -200; x <= 400; x += 2) { pos.push(x, WL, z, x, Math.min(gY(x, z), WL), z); if (n) { const a = (n - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } n++; }
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+        const m = new THREE.Mesh(g, cutMat); m.name = 'water_section'; context.add(m); }
+    }
+    await breathe();
+    { // raised runway (embankment + bridge over the stream), apron behind the terminal, two taxiway links
+      const rx = RP.reduce((b, p) => Math.abs(p[1] - RZ) < Math.abs(b[1] - RZ) ? p : b)[0], gap = 34, RH_ = 2.6;
+      const emb = new THREE.Shape([[-36, -.5], [-27, RH_], [27, RH_], [36, -.5]].map(([a, b]) => new THREE.Vector2(a, b)));
+      for (const [a, b] of [[X0 + 1, rx - gap], [rx + gap, X1 - 1]]) {
+        const g = new THREE.ExtrudeGeometry(emb, { depth: b - a, bevelEnabled: false }).rotateY(-Math.PI / 2).translate(b, 0, RZ);
+        put('emb', g); put('rwy', at(bx(b - a, .3, 45, 'x'), (a + b) / 2, RH_ + .12, RZ));
+      }
+      put('rwy', at(bx(2 * gap + 2, .3, 45, 'x'), rx, RH_ + .12, RZ));
+      put('bridge', at(rbox(2 * gap + 4, 1.4, 58, .08, 2, 'x'), rx, RH_ - .6, RZ));
+      for (let x = rx - gap + 10; x < rx + gap - 4; x += 12) put('bridge', at(rbox(1.8, RH_ + 2.6, 50, .1, 2), x, (RH_ - 1.3 - 2.6) / 2 + .2, RZ));
+      // markings: centre-line dashes, edge lines, threshold bars
+      for (let x = X0 + 30; x < X1 - 30; x += 50) put('mark', at(bx(30, .04, .9), x, RH_ + .29, RZ));
+      for (const s of [-1, 1]) put('mark', at(bx(X1 - X0 - 20, .04, .6), (X0 + X1) / 2, RH_ + .29, RZ + s * 21.5));
+      for (const xe of [X0 + 14, X1 - 14]) for (let k = -8; k <= 8; k++) if (k) put('mark', at(bx(24, .04, 1.6), xe, RH_ + .29, RZ + k * 2.4));
+      put('apron', at(bx(540, .12, 56), 30, .06, -72));
+      for (const xt of [-150, 200]) { const L = Math.hypot(RH_, 22); put('apron', at(bx(23, .3, L, 'z'), xt, RH_ / 2 + .1, -111, 0, 0, Math.atan2(RH_, 22))); }
+      flush('emb', plasterMat(2785167), context, 'runway_embankment'); flush('rwy', variant(M.M_gravel, { color: 0x3f3d3a }), context, 'runway');
+      flush('bridge', M.M_stone_masonry, context, 'runway_bridge'); flush('mark', variant(M.M_lime_wall, {}), context, 'runway_markings');
+      flush('apron', variant(M.M_stone_masonry, { color: 0xb3ada4 }), context, 'apron');
+    }
+    await breathe();
+    { // landside road with street lamps and an avenue of trees
+      const pos = [], uv = [], idx = []; let n = 0, s = 0;
+      for (let i = 0; i < roadPts.length; i++) {
+        const [x, z] = roadPts[i], [px, pz] = roadPts[Math.max(0, i - 1)], [nx_, nz_] = roadPts[Math.min(roadPts.length - 1, i + 1)], tx = nx_ - px, tz = nz_ - pz, l = Math.hypot(tx, tz) || 1, ox = -tz / l * 6, oz = tx / l * 6;
+        if (i) s += Math.hypot(x - px, z - pz); const y = Math.max(gY(x + ox, z + oz), gY(x - ox, z - oz)) + .08;
+        pos.push(x + ox, y, z + oz, x - ox, y, z - oz); uv.push(s, 0, s, 12); if (n) { const k = (n - 1) * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); } n++;
+      }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+      const m = new THREE.Mesh(g, variant(M.M_gravel, { color: 0x6f6b64 })); m.name = 'landside_road'; context.add(m);
+      const lampGlow = variant(M.M_window_glow, {}), spots = roadPts.filter((_, i) => i % 7 === 3).map(([x, z]) => [x, z + 8]);
+      const d = new THREE.Object3D();
+      const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(.08, .12, 7, 8).translate(0, 3.5, 0), M.M_steel_dark, spots.length); pole.name = 'road_lamp_poles';
+      const head = new THREE.InstancedMesh(new THREE.CylinderGeometry(.3, .22, .6, 12).translate(0, 7.2, 0), lampGlow, spots.length); head.name = 'road_lamp_heads';
+      spots.forEach(([x, z], i) => { d.position.set(x, gY(x, z), z); d.updateMatrix(); pole.setMatrixAt(i, d.matrix); head.setMatrixAt(i, d.matrix); });
+      head.castShadow = false; context.add(pole, head);
+    }
+    await breathe();
+    { // vegetation: forest on the foothills, tree belts beside the terminal, scrub meadow and bank shrubs in front
+      const trees = [], onRoad = (x, z) => roadD(x, z) < 11, inBed = (x, z) => { const r = riverAt(x, z); return r.d < bedW(r.t) + 3; };
+      const platform = (x, z) => x > -295 && x < 368 && z > -188 && z < 90;
+      for (let t = 0; trees.length < 3200 && t < 40000; t++) {          // foothill forest beyond the runway
+        const x = X0 + 4 + rnd() * (X1 - X0 - 8), z = Z0 + 4 + rnd() * (-180 - Z0), y = gY(x, z); if (inBed(x, z)) continue;
+        const u = rnd(), hi = clamp(y / 90, 0, 1);
+        const species = u < .5 - hi * .45 ? 'broadleaf' : u < .72 - hi * .4 ? 'sal' : u < .92 - hi * .2 ? 'chirPine' : 'bluePine';
+        trees.push({ x, y, z, species, height: { broadleaf: 12, sal: 15, chirPine: 15, bluePine: 13 }[species] * (.8 + rnd() * .3) });
+      }
+      for (let t = 0, n = 0; n < 900 && t < 20000; t++) {             // belts east and west of the platform
+        const x = X0 + 4 + rnd() * (X1 - X0 - 8), z = -180 + rnd() * 300; if (platform(x, z) || inBed(x, z) || onRoad(x, z) || (x > -300 && x < 375)) continue;
+        trees.push({ x, y: gY(x, z), z, species: rnd() < .65 ? 'broadleaf' : 'sal', height: 10 + rnd() * 6 }); n++;
+      }
+      for (let c = 0; c < 46; c++) {                                  // scrub meadow: shrub clumps with a few trees, as in the reference
+        const cx = X0 + 20 + rnd() * (X1 - X0 - 40), cz = 95 + rnd() * (Z1 - 110), k = 10 + Math.floor(rnd() * 30);
+        for (let i = 0; i < k; i++) { const x = cx + (rnd() - .5) * 46, z = cz + (rnd() - .5) * 26; if (x < X0 + 3 || x > X1 - 3 || z > Z1 - 3 || inBed(x, z) || onRoad(x, z)) continue;
+          trees.push({ x, y: gY(x, z), z, species: rnd() < .14 ? 'broadleaf' : 'shrub', height: rnd() < .14 ? 8 + rnd() * 5 : 1.6 + rnd() * 2.6 }); }
+      }
+      for (let i = 0; i < 700; i++) {                                  // bank shrubs along the stream
+        const p = RP[Math.floor(rnd() * RP.length)], r = riverAt(p[0], p[1]), a = rnd() * Math.PI * 2, d = bedW(r.t) + 2 + rnd() * 9, x = p[0] + Math.cos(a) * d, z = p[1] + Math.sin(a) * d;
+        if (x < X0 + 3 || x > X1 - 3 || z < Z0 + 3 || z > Z1 - 3 || inBed(x, z) || onRoad(x, z) || platform(x, z) && Math.abs(z) < 75) continue;
+        trees.push({ x, y: gY(x, z), z, species: 'shrub', height: 1.8 + rnd() * 2.4 });
+      }
+      // avenue trees (the north side stays clear in front of the entrance canopy)
+      roadPts.forEach(([x, z], i) => { if (i % 5 || x > -30) return; for (const s of x > -250 ? [1] : [-1, 1]) { const zz = z + s * 11; trees.push({ x, y: gY(x, zz), z: zz, species: 'broadleaf', height: 9 + rnd() * 2, lod: 0 }); } });
+      // thin the foreground by 40% (user request): trees and shrubs in front of the terminal (south of the platform edge),
+      // picked by a hash of their position so the rest of the landscape's random layout is unchanged
+      const keep = t => t.z <= 90 || ((Math.sin(t.x * 12.9898 + t.z * 78.233) * 43758.5453) % 1 + 1) % 1 >= .4;
+      await breathe();
+      // mockup: trees and shrubs removed
+      const rocks = [];
+      for (let t = 0; rocks.length < 160 && t < 12000; t++) { const p = RP[Math.floor(rnd() * RP.length)], x = p[0] + (rnd() - .5) * 50, z = p[1] + (rnd() - .5) * 50; if (!inBed(x, z)) continue; const y = gY(x, z); if (y < WL - .4) continue;
+        rocks.push({ x, y: Math.max(y, WL - .25), z, size: rnd() < .2 ? 1 + rnd() * 1.4 : .3 + rnd() * .6 }); }
+      { const rk = createRocks(M, rocks, { name: 'stream_boulders' }), pm = plasterMat(4033172); rk.traverse(o => { if (o.isMesh) { o.material = pm; if (o.isInstancedMesh) o.instanceColor = null; } }); context.add(rk); }
+      addWaterObstacles(context.getObjectByName('stream'), rocks.filter(o => o.y < WL + .35).map(o => ({ x: o.x, z: o.z, r: o.size * .9 })));   // foam rings + wakes
+      // riverside planting: reeds and cattails at the water's edge, broad-leaf plants on the bank
+      await breathe();
+      const reeds = [], leaves = [];
+      for (let t = 0; reeds.length < 420 && t < 40000; t++) { const p = RP[Math.floor(rnd() * RP.length)], x = p[0] + (rnd() - .5) * 60, z = p[1] + (rnd() - .5) * 60;
+        if (x < X0 + 3 || x > X1 - 3 || z < Z0 + 3 || z > Z1 - 3 || platform(x, z)) continue; const y = gY(x, z); if (y < WL - .12 || y > WL + .35) continue; reeds.push({ x, y: Math.max(y, WL - .05), z, s: .9 + rnd() * .5 }); }
+      for (let t = 0; leaves.length < 140 && t < 20000; t++) { const p = RP[Math.floor(rnd() * RP.length)], r = riverAt(p[0], p[1]), a = rnd() * Math.PI * 2, d = bedW(r.t) + 1 + rnd() * 5, x = p[0] + Math.cos(a) * d, z = p[1] + Math.sin(a) * d;
+        if (x < X0 + 3 || x > X1 - 3 || z < Z0 + 3 || z > Z1 - 3 || platform(x, z) || onRoad(x, z) || inBed(x, z)) continue; leaves.push({ x, y: gY(x, z), z, s: 1 + rnd() * .6 }); }
+      // mockup: reeds and river plants removed
+      await breathe();
+      const tufts = [];                                                // tall meadow grass, densest in the foreground
+      for (let t = 0; tufts.length < 0 && t < 110000; t++) { if ((t & 16383) === 16383) await breathe(); const x = X0 + 2 + rnd() * (X1 - X0 - 4), z = 90 + Math.pow(rnd(), .6) * (Z1 - 92); if (inBed(x, z) || onRoad(x, z)) continue; tufts.push({ x, y: gY(x, z), z, s: 2.2 + rnd() * .8 }); }
+      // mockup: meadow grass removed
+    }
+
+    await breathe();
+    { // MOCKUP · plaster relief backdrop: ridged foothills and the range to the north, rising out of a mist floor
+      // noise helpers (hsh, vn, ridged) live in the plaster section above
+      const BX0 = -2900, BX1 = 2900, BZ0 = -3300, BZ1 = Z1 + 1100, ST = 16, nx = Math.round((BX1 - BX0) / ST), nz = Math.round((BZ1 - BZ0) / ST);
+      const pos = new Float32Array((nx + 1) * (nz + 1) * 3), mist = new Float32Array((nx + 1) * (nz + 1)), inS = new Uint8Array((nx + 1) * (nz + 1)), idx = [];
+      for (let j = 0, k = 0; j <= nz; j++) { if ((j & 31) === 31) await breathe();
+        for (let i = 0; i <= nx; i++, k++) {
+          const x = BX0 + i * ST, z = BZ0 + j * ST, cx = clamp(x, X0, X1), cz = clamp(z, Z0, Z1), d = Math.hypot(x - cx, z - cz);
+          let y;
+          if (d === 0) { y = gY(x, z) - 1.5; mist[k] = 0; }   // under the slab surface: hidden filler, closes the seam
+          else {
+            // the slab edge height fades out within 420 m (no shelf copied sideways from the edge)
+            const b0 = gY(cx, cz), base = b0 * (1 - smooth(0, 420, d));
+            const north = Math.pow(smooth(-250, -2000, z), 1.1), front = 1 - smooth(Z1 - 350, Z1 + 60, z);   // flat misty plain in front of the slab
+            const amp = smooth(0, 140, d) * (5 + 8 * north) * (.6 + .5 * vn(x / 1700 + 2, z / 1700)) * front;
+            y = base + amp * Math.max(0, ridged(x, z) - .12) * 1.45;
+            const low = 1 - smooth(base + 10, base + 110, y), edge = Math.min(x - BX0, BX1 - x, z - BZ0);
+            mist[k] = Math.max(smooth(250, 1400, d) * .8, smooth(1800, 3400, Math.hypot(x - 20, z + 150)) * .95, 1 - smooth(0, 650, edge), smooth(Z1 + 80, Z1 + 700, z) * .85);
+          }
+          pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
+        } }
+      for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('mist', new THREE.BufferAttribute(mist, 1)); g.setIndex(idx); g.computeVertexNormals();
+      const m = new THREE.Mesh(g, plasterMat(2785167, { mist: true })); m.name = 'valley_ground'; m.castShadow = false; context.add(m);
+    }
+
+    await breathe();
+    { // MOCKUP 2 · mountain layers: forested hills → ranges → snow peaks, each hazier than the last
+      const L = new THREE.Vector3(-.45, .75, .5).normalize();
+      const LAYERS = [
+        { name: 'hills_near', zc: -1050, W: 300, H: 260, Lx: 760, x: 3400, st: 20, col: 0x1b3044, haze: .34, rough: 0, forest: 1 },
+        { name: 'hills_mid',  zc: -1900, W: 420, H: 430, Lx: 1150, x: 4800, st: 28, col: 0x2a4562, haze: .52, rough: .35, forest: .6 },
+        { name: 'range',      zc: -3100, W: 560, H: 620, Lx: 980, x: 6000, st: 36, col: 0x3c5a7c, haze: .64, rough: .7, forest: 0 },
+        { name: 'snow_peaks', zc: -6200, W: 950, H: 1400, Lx: 1500, x: 8000, st: 52, col: 0x6c86a6, haze: .66, rough: 1, forest: 0, snow: 0xb4c3d4 },
+      ];
+      for (const [li, Ly] of [].entries()) {   // mockup 3: mountain layers removed
+        const z0 = Ly.zc - 2.4 * Ly.W, z1 = Ly.zc + 2.4 * Ly.W, nx = Math.round(2 * Ly.x / Ly.st), nz = Math.round((z1 - z0) / Ly.st), o = li * 37.7;
+        const pos = new Float32Array((nx + 1) * (nz + 1) * 3), idx = [];
+        for (let j = 0, k = 0; j <= nz; j++) { if ((j & 15) === 15) await breathe();
+          for (let i = 0; i <= nx; i++, k++) {
+            const x = -Ly.x + i * Ly.st, z = z0 + j * Ly.st;
+            const crest = .38 + .62 * vn(x / Ly.Lx + o, o) ** 1.3 + .25 * (vn(x / (Ly.Lx * .35) + o, 3 + o) - .5);   // peaks and saddles along the range
+            const wob = (vn(x / 1400 + o, 7 + o) - .5) * Ly.W * 1.6, t = (z - Ly.zc - wob) / Ly.W;
+            let h = Ly.H * crest * Math.exp(-t * t * 1.3);
+            h *= 1 + Ly.rough * (ridged(x * 1.7 + o * 100, z * 1.7) - .3) * .9;                                        // ridges and gullies on the far ranges
+            h += Ly.forest * 3.2 * vn(x / 9 + o, z / 9);                                                              // canopy texture on the near hills
+            pos[k * 3] = x; pos[k * 3 + 1] = Math.max(h, 0) - 8; pos[k * 3 + 2] = z;
+          } }
+        for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+        const n = g.attributes.normal, cols = new Float32Array(pos.length), hzs = new Float32Array(n.count), base = new THREE.Color(Ly.col), snow = Ly.snow ? new THREE.Color(Ly.snow) : null, c = new THREE.Color();
+        for (let k = 0; k < n.count; k++) {
+          const x = pos[k * 3], y = pos[k * 3 + 1], z = pos[k * 3 + 2], ny = n.getY(k), ndl = Math.max(0, n.getX(k) * L.x + ny * L.y + n.getZ(k) * L.z);
+          c.copy(base).multiplyScalar(.84 + .2 * ndl);
+          if (Ly.forest) c.multiplyScalar(.9 + .18 * vn(x / 16 + o, z / 16));
+          if (snow) { const sn = smooth(Ly.H * .42, Ly.H * .62, y + 120 * (vn(x / 90, z / 90) - .5)) * smooth(.5, .78, ny); c.lerp(snow.clone().multiplyScalar(.86 + .18 * ndl), sn * .6); }
+          const hz = clamp(Ly.haze + .5 * Math.pow(1 - clamp(y / (Ly.H * .85), 0, 1), 2.2), 0, 1);                  // valleys sink into the haze
+          hzs[k] = hz; cols[k * 3] = c.r; cols[k * 3 + 1] = c.g; cols[k * 3 + 2] = c.b;
+        }
+        g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); g.setAttribute('hz', new THREE.BufferAttribute(hzs, 1));
+        const m = new THREE.Mesh(g, hazeMat); m.name = 'haze_' + Ly.name; m.castShadow = m.receiveShadow = false; m.renderOrder = -1; context.add(m);
+      }
+    }
+    { // MOCKUP 4 · scattered lights across the dark ground, as on the masterplan map
+      const src = ['valley_ground', 'valley_terrain'].map(n => context.getObjectByName(n)?.geometry.attributes.position).filter(Boolean);
+      const N = 240, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), warm = new THREE.Color(0xffc45a), cool = new THREE.Color(0xbff3ea), c = new THREE.Color();
+      for (let k = 0, t = 0; k < N && t < 40000; t++) {
+        const a = src[rnd() < .8 ? 0 : src.length - 1], i = Math.floor(rnd() * a.count), x = a.getX(i), y = a.getY(i), z = a.getZ(i);
+        if (x > -320 && x < 390 && z > -200 && z < 100) continue;                 // keep the airport platform clear
+        if (Math.hypot(x - 20, z + 150) > 1900) continue;
+        pos.set([x, y + 1.2, z], k * 3); c.copy(rnd() < .85 ? warm : cool).multiplyScalar(2.2 + rnd() * 2.6); col.set([c.r, c.g, c.b], k * 3); k++;
+      }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 2, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, fog: false }));
+      pts.name = 'ground_lights'; context.add(pts);
+    }
+    context.traverse(o => { if (o.isMesh && !o.name.startsWith('haze_')) o.receiveShadow = true; });
+    stage.content.add(context);
+  // ─────────────────────────────────────────────────────────── 7b · aircraft on the runway and apron (v02)
+  // Imported models (models/assets/aircraft, see README there): Airbus A321 (GLB) ×2, Boeing 747-200 (FBX).
+  // Each is scaled to its real length, sat on the pavement and given airliner paint (glossy clearcoat).
+  // Kept in the preview context (outside the object root), so the O1 validator budget is unchanged.
+  const Laircraft = new THREE.Group(); Laircraft.name = 'L_aircraft'; context.add(Laircraft);
+  const RWY_Y = 2.87, APRON_Y = .12, RWY_Z = -147;
+  const paint = (src, glossy = true) => {
+    const m = new THREE.MeshPhysicalMaterial({ color: src.color ?? 0xffffff, map: src.map ?? null, roughness: glossy ? .32 : .6, metalness: glossy ? .05 : .2,
+      clearcoat: glossy ? .7 : 0, clearcoatRoughness: .18, transparent: !!src.transparent && src.opacity < 1, opacity: src.opacity ?? 1, side: THREE.FrontSide });
+    if (m.map) { m.map.colorSpace = THREE.SRGBColorSpace; m.map.anisotropy = renderer.capabilities.getMaxAnisotropy(); }
+    m.name = (src.name || 'paint') + '_gmc'; return m;
+  };
+  // wrap → rotate so the fuselage runs along +Z with the nose at +Z → scale to real length → wheels on y = 0
+  function normalise(obj, length, { yaw = 0, hide = [] } = {}) {
+    obj.traverse(o => { if (hide.some(h => o.name.toLowerCase().includes(h))) o.visible = false; });
+    const inner = new THREE.Group(); inner.add(obj); inner.updateMatrixWorld(true);
+    { const b0 = new THREE.Box3().setFromObject(obj), s0 = b0.getSize(new THREE.Vector3()); inner.rotation.y = (s0.x > s0.z ? Math.PI / 2 : 0) + yaw; inner.updateMatrixWorld(true); }
+    const b = new THREE.Box3(); inner.traverse(o => { if (o.isMesh && o.visible) b.expandByObject(o); });
+    const s = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3()), k = length / s.z;
+    inner.scale.setScalar(k); inner.position.set(-c.x * k, -b.min.y * k, -c.z * k);
+    // bake every part into plane space and merge by material (map + colour): hundreds of parts → a handful of draw calls
+    const holder = new THREE.Group(); holder.add(inner); holder.updateMatrixWorld(true);
+    const bins = new Map();
+    inner.traverse(o => {
+      if (!o.isMesh || !o.visible) return; let hidden = false; o.traverseAncestors(a => { if (!a.visible) hidden = true; }); if (hidden) return;
+      const mats = [].concat(o.material), src = o.geometry, groups = Array.isArray(o.material) && src.groups.length ? src.groups : [{ start: 0, count: Infinity, materialIndex: 0 }];
+      let g = src.index ? src.toNonIndexed() : src.clone(); g.applyMatrix4(o.matrixWorld);
+      for (const n of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(n)) g.deleteAttribute(n);
+      if (!g.attributes.normal) g.computeVertexNormals();
+      if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+      for (const gr of groups) {
+        const mat = mats[gr.materialIndex] ?? mats[0], key = (mat.map?.uuid ?? '-') + (mat.color?.getHexString() ?? '') + (mat.opacity < 1 ? 't' : '');
+        const part = gr.count === Infinity && groups.length === 1 ? g : (() => { const p = new THREE.BufferGeometry(), a = Math.min(gr.start, g.attributes.position.count), b = Math.min(gr.start + gr.count, g.attributes.position.count);
+          for (const n of ['position', 'normal', 'uv']) { const at = g.attributes[n]; p.setAttribute(n, new THREE.BufferAttribute(at.array.slice(a * at.itemSize, b * at.itemSize), at.itemSize)); } return p; })();
+        if (!bins.has(key)) bins.set(key, { mat, geos: [] }); bins.get(key).geos.push(part);
+      }
+    });
+    const outer = new THREE.Group();
+    for (const { mat, geos } of bins.values()) {
+      const m = new THREE.Mesh(mergeGeometries(geos, false), paint(mat)); m.castShadow = m.receiveShadow = true; outer.add(m);
+    }
+    outer.userData.size = s.multiplyScalar(k); return outer;
+  }
+  const place = (p, x, y, z, heading, name) => { p.position.set(x, y, z); p.rotation.y = heading; p.name = name; Laircraft.add(p); return p; };
+  const base = '../assets/aircraft/';
+  const _bin = n => fetch(base + n + '.json').then(r => r.json()).then(j => Uint8Array.from(atob(j.data), ch => ch.charCodeAt(0)).buffer);   // bundle: models wrapped as base64 JSON
+  const [gltf, fbx, fbxTex] = await Promise.all([
+    _bin('a321.glb').then(buf => new GLTFLoader().parseAsync(buf, base)),
+    _bin('b747.fbx').then(buf => new FBXLoader().parse(buf, base)),
+    new THREE.TextureLoader().loadAsync(base + 'b747_avensa.png'),
+  ]);
+  fbxTex.flipY = true; fbx.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => { m.map = fbxTex; m.color?.set(0xffffff); }); });
+  const A321_LEN = 44.5, B747_LEN = 70.6;
+  const a321 = normalise(gltf.scene, A321_LEN, { yaw: PLANE_CFG.a321Yaw, hide: ['eye', 'iris', 'pupil'] });
+  const b747 = normalise(fbx, B747_LEN, { yaw: PLANE_CFG.b747Yaw });
+  // 747 lined up on the west end of the runway, heading east (+X) for take-off
+  const jumbo = place(b747, -250, RWY_Y, RWY_Z, Math.PI / 2, 'aircraft_b747_runway');
+  // A321 parked nose-in at a gate behind the terminal (apron runs z −100…−44, terminal back face z −36)
+  place(a321, -70, APRON_Y, -48 - A321_LEN / 2, 0, 'aircraft_a321_gate');
+  // second A321 taxiing along the apron towards the east taxiway link
+  const taxi = place(a321.clone(), 120, APRON_Y, -86, Math.PI / 2 - .12, 'aircraft_a321_taxi');
+  console.info('[O1] aircraft', { a321: a321.userData.size, b747: b747.userData.size, tris: countTriangles(Laircraft) });
+
+  // take-off: the 747 accelerates east, rotates past the bridge, climbs out, then returns to the threshold
+  const TO = { t: -1, x0: -250 };
+  planesTick = dt => {
+    if (TO.t < 0) return; TO.t += dt;
+    const t = TO.t, a = 12, x = TO.x0 + .5 * a * t * t, v = a * t, xr = 180;
+    let y = RWY_Y, pitch = 0;
+    if (x > xr) { const d = x - xr; pitch = Math.min(.18, d / 260); y = RWY_Y + Math.max(0, d - 40) * .16 + Math.max(0, d - 40) ** 2 * .00035; }
+    jumbo.position.set(x, y, RWY_Z); jumbo.rotation.set(0, Math.PI / 2, 0); jumbo.rotateX(-pitch);
+    if (x > 900) { TO.t = -1; jumbo.position.set(TO.x0, RWY_Y, RWY_Z); jumbo.rotation.set(0, Math.PI / 2, 0); }
+    return v;
+  };
+  takeOff = () => { if (TO.t < 0) TO.t = 0; };
+
+  }
+  await breathe(); lap('landscape built');
+  stage.add(root);
+  enableWaterReflections(stage, { scale: .5 });   // the stream mirrors its banks and the terminal
+  root.traverse(o => { if (o.isMesh && [].concat(o.material)[0].name === 'M_glass') o.castShadow = false; });
+  { const bb = new THREE.Box3().setFromObject(root); stage.rig.fit(bb, 4096); }
+
+  // ─────────────────────────────────────────────────────────── 8 · accent light driven by the gables
+  // (Few lights on purpose: every extra light multiplies shader compile time on Windows/ANGLE.)
+  // Accent = warm bounce in the hemisphere light's ground colour, swelling with the lit gables.
+  // (A point light leaves a sharp glint on the near-mirror glass wherever it sits.)
+  const bounceWarm = new THREE.Color(0x7a4a22), bounceBase = new THREE.Color();
+  await breathe(); await renderer.compileAsync(stage.scene, camera);
+  lap('shaders compiled');
+
+  // ─────────────────────────────────────────────────────────── 9 · sound (WebAudio, first gesture)
+  let ac = null, out = null, soundOn = false;
+  function audio() {
+    if (ac) return ac; ac = new AudioContext();
+    const comp = ac.createDynamicsCompressor(), dly = ac.createDelay(), fb = ac.createGain(), lp = ac.createBiquadFilter();
+    out = ac.createGain(); out.gain.value = .22; lp.type = 'lowpass'; lp.frequency.value = 3200; dly.delayTime.value = .19; fb.gain.value = .28;
+    out.connect(lp); lp.connect(comp); lp.connect(dly); dly.connect(fb); fb.connect(dly); dly.connect(comp); comp.connect(ac.destination); return ac;
+  }
+  const SCALE = [293.66, 329.63, 392, 440, 493.88, 587.33, 659.25, 783.99, 880];   // D major pentatonic: calm, bell-like
+  function chime(i, up = true) {
+    if (!soundOn) return; const c = audio(), t = c.currentTime, f = SCALE[i % SCALE.length] * (up ? 1 : .5);
+    for (const [mul, g0] of [[1, .5], [2.76, .12], [5.4, .04]]) {
+      const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f * mul;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(g0, t + .006); g.gain.exponentialRampToValueAtTime(.0001, t + (up ? 2.2 : 1.1) / mul ** .3);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + 2.4);
+    }
+  }
+  function whoosh() {
+    if (!soundOn) return; const c = audio(), n = c.sampleRate * .6, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / n);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = buf; f.type = 'bandpass'; f.Q.value = .8;
+    f.frequency.setValueAtTime(300, c.currentTime); f.frequency.exponentialRampToValueAtTime(2400, c.currentTime + .55); g.gain.value = .18;
+    s.connect(f); f.connect(g); g.connect(out); s.start();
+  }
+
+  // ─────────────────────────────────────────────────────────── 10 · UI state
+  let look = 'dusk', quality = 'high';
+  const press = (sel, val, attr) => document.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === val)));
+  function setLook(v) {
+    look = v; stage.setMood(v === 'clay' ? 'day' : v); stage.setClay(v === 'clay'); plasterLook(v);
+    press('[data-look]', v, 'look'); $('t-mood').textContent = v.toUpperCase(); whoosh();
+  }
+  document.querySelectorAll('[data-look]').forEach(b => b.onclick = () => setLook(b.dataset.look));
+  function cascade(on) {
+    const order = on ? [...MOD].sort((a, b) => a.x - b.x) : [...MOD].sort((a, b) => b.x - a.x);
+    order.forEach((m, i) => setTimeout(() => { m.target = on ? 1 : 0; chime(m.id, on); }, i * 150));
+  }
+  const anyOn = () => MOD.some(m => m.target > 0);
+  function syncLightsButton() { $('a-lights').textContent = anyOn() ? 'Lights off' : 'Lights on'; }
+  $('a-lights').onclick = () => { cascade(!anyOn()); setTimeout(syncLightsButton, 10); };
+  $('a-sound').onclick = () => { soundOn = !soundOn; if (soundOn) audio().resume(); $('a-sound').textContent = soundOn ? 'Sound on' : 'Sound off'; $('a-sound').setAttribute('aria-pressed', String(soundOn)); };
+  function setQuality(q) { quality = q; stage.setQuality(q); $('t-q').textContent = q.toUpperCase(); $('a-q').textContent = 'Quality: ' + q; }
+  $('a-q').onclick = () => setQuality(quality === 'high' ? 'low' : 'high');
+  if (['localhost', '127.0.0.1'].includes(location.hostname)) { $('a-glb').hidden = false; $('a-glb').onclick = () => stage.exportGLB(root); }
+  $('s-kit').textContent = KIT_VERSION;
+
+  // ─────────────────────────────────────────────────────────── 11 · fixed-angle camera rig
+  // One composed view (front elevation, slightly west of south, 6° up). Tilt springs back; zoom goes to the cursor.
+  // reference framing, turned 5° further off-axis and slightly higher so the deep diagrid, eaves and roof read in depth
+  const BASE = { az: 195, el: 2.4, target: V(16, 12, ZF - 4) };
+  const st = { yaw: 0, pitch: 0, yawT: 0, pitchT: 0, zoom: 1, zoomT: 1, pan: V(0, 0, 0), panT: V(0, 0, 0), px: 0, py: 0 };
+  let baseDist = 600;
+  function fit() {
+    const w = innerWidth, h = innerHeight, aspect = w / h, vf = camera.fov * Math.PI / 180;
+    const hf = 2 * Math.atan(Math.tan(vf / 2) * aspect), half = aspect < 1 ? 120 : 272;
+    baseDist = Math.max(half / Math.tan(hf / 2), 40 / Math.tan(vf / 2));
+  }
+  fit(); addEventListener('resize', fit);
+  const ray = new THREE.Raycaster(), facade = new THREE.Plane(new THREE.Vector3(0, 0, 1), -ZF), hit = new THREE.Vector3();
+  const ndc = (cx, cy) => new THREE.Vector2(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1);
+  const ZMIN = .05, ZMAX = 1.6;   // a 500 m building needs a deeper zoom than the skill's 0.22 to reach node plates and bolts
+  function zoomAt(cx, cy, f) {
+    const nz = clamp(st.zoomT * f, ZMIN, ZMAX);
+    ray.setFromCamera(ndc(cx, cy), camera);
+    if (ray.ray.intersectPlane(facade, hit)) { const k = 1 - nz / st.zoomT, c = BASE.target.clone().add(st.panT); st.panT.x += (hit.x - c.x) * k; st.panT.y += (hit.y - c.y) * k; }
+    st.zoomT = nz; if (st.zoomT >= .999) st.panT.set(0, 0, 0); clampPan();
+  }
+  function clampPan() { st.panT.x = clamp(st.panT.x, -280, 300); st.panT.y = clamp(st.panT.y, -12, 26); st.panT.z = 0; }
+  function reset() { st.yawT = st.pitchT = 0; st.zoomT = 1; st.panT.set(0, 0, 0); }
+  $('a-reset').onclick = reset;
+
+  // ─────────────────────────────────────────────────────────── 12 · interaction
+  const el = renderer.domElement, pointers = new Map(); let drag = null, hoverMod = null, pinch0 = null, downAt = null;
+  el.addEventListener('contextmenu', e => e.preventDefault());
+  el.addEventListener('pointerdown', e => {
+    el.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (e.pointerType !== 'mouse') hoverAt(e.clientX, e.clientY);   // touch has no hover: pick the gable under the finger
+    if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch0 = { d: Math.hypot(a.x - b.x, a.y - b.y), z: st.zoomT }; drag = null; return; }
+    drag = { mode: e.shiftKey || e.button === 2 ? 'pan' : 'tilt', x: e.clientX, y: e.clientY };
+    el.style.cursor = drag.mode === 'pan' ? 'move' : 'grabbing';
+  });
+  el.addEventListener('pointermove', e => {
+    st.px = e.clientX / innerWidth - .5; st.py = e.clientY / innerHeight - .5;
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch0 && pointers.size === 2) {
+      const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+      zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, (pinch0.z * pinch0.d / d) / st.zoomT); return;
+    }
+    if (drag) {
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+      if (drag.mode === 'tilt') { st.yawT = clamp(st.yawT - dx * .03, -9, 9); st.pitchT = clamp(st.pitchT + dy * .02, -3, 7); }
+      else { const k = baseDist * st.zoom * Math.tan(camera.fov * Math.PI / 360) * 2 / innerHeight;
+        const r = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0); st.panT.x -= r.x * dx * k; st.panT.y += dy * k; clampPan(); }
+      return;
+    }
+    hoverAt(e.clientX, e.clientY);
+  });
+  const end = e => {
+    pointers.delete(e.pointerId); if (pointers.size < 2) pinch0 = null;
+    const moved = downAt ? Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) : 99;
+    if (drag && drag.mode === 'tilt' && moved < 5 && performance.now() - downAt.t < 400 && hoverMod) { hoverMod.target = hoverMod.target > .5 ? 0 : 1; chime(hoverMod.id, hoverMod.target > .5); syncLightsButton(); }
+    drag = null; el.style.cursor = hoverMod ? 'pointer' : 'grab';
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(e.deltaY * .0012)); }, { passive: false });
+  el.addEventListener('dblclick', reset);
+  el.addEventListener('pointerleave', () => { setHover(null); });
+  function setHover(m) {
+    if (hoverMod && hoverMod !== m) hoverMod.hover = 0; hoverMod = m; if (m) m.hover = 1;
+    el.style.cursor = drag ? el.style.cursor : m ? 'pointer' : 'grab';
+    $('tip').style.opacity = m ? 1 : 0;
+  }
+  function hoverAt(cx, cy) {
+    ray.setFromCamera(ndc(cx, cy), camera);
+    const m = ray.ray.intersectPlane(facade, hit) ? moduleAt(hit.x, hit.y) : null;
+    setHover(m ? MOD[m.id] : null);
+    if (m) {
+      const M_ = MOD[m.id], tip = $('tip');
+      tip.innerHTML = `<b>Gable ${String(m.id + 1).padStart(2, '0')}</b><br>PEAK::${m.h.toFixed(1)} M · SPAN::${(m.half * 2)} M<br>LIGHTS::${M_.target > .5 ? 'ON' : 'OFF'}<br><span style="opacity:.6">click to switch</span>`;
+      tip.style.left = Math.min(cx, innerWidth - 220) + 'px'; tip.style.top = cy + 'px';
+    }
+  }
+  addEventListener('keydown', e => {
+    if (e.target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
+    const k = e.key.toLowerCase();
+    if (k === 'l') $('a-lights').click();
+    else if (k === '1') setLook('dusk'); else if (k === '2') setLook('golden'); else if (k === '3') setLook('day'); else if (k === '4') setLook('clay');
+    else if (k === '0') reset(); else if (k === 'q') $('a-q').click(); else if (k === 'm') $('a-sound').click();
+    else if (k === '+' || k === '=') zoomAt(innerWidth / 2, innerHeight / 2, .8); else if (k === '-') zoomAt(innerWidth / 2, innerHeight / 2, 1.25);
+  });
+  el.style.cursor = 'grab';
+
+  // ─────────────────────────────────────────────────────────── 13 · loop
+  const clock = new THREE.Clock(); let frames = 0, acc = 0, t0 = performance.now(), downgraded = false, uiTick = 1;
+  const glowCol = new THREE.Color();
+  let fixedDt = 0;   // > 0 only when the test API steps frames by hand
+  const loop = () => {
+    const dt = fixedDt || Math.min(clock.getDelta(), .05), now = performance.now() / 1000, k = 1 - Math.exp(-dt * 7);
+    // camera: tilt springs back when released; mouse parallax + idle breathing
+    if (!drag) { st.yawT *= Math.exp(-dt * 2.6); st.pitchT *= Math.exp(-dt * 2.6); }
+    st.yaw += (st.yawT - st.yaw) * k; st.pitch += (st.pitchT - st.pitch) * k; st.zoom += (st.zoomT - st.zoom) * k; st.pan.lerp(st.panT, k);
+    // no idle float or mouse parallax: at 600 m even 0.1° of drift moves the facade by pixels and makes thin
+    // mullions and slats crawl. The view holds perfectly still unless the viewer drags or zooms.
+    if (!drag && Math.abs(st.yawT) < 1e-3 && Math.abs(st.yaw) < 1e-3) st.yaw = st.yawT = 0;
+    if (!drag && Math.abs(st.pitchT) < 1e-3 && Math.abs(st.pitch) < 1e-3) st.pitch = st.pitchT = 0;
+    if (Math.abs(st.zoomT - st.zoom) < 1e-5) st.zoom = st.zoomT;
+    if (st.pan.distanceToSquared(st.panT) < 1e-8) st.pan.copy(st.panT);
+    const az = BASE.az + st.yaw, elv = BASE.el + st.pitch;
+    const tgt = BASE.target.clone().add(st.pan);
+    camera.position.copy(tgt).addScaledVector(sunDirection(az, elv), baseDist * st.zoom); camera.lookAt(tgt);
+    camera.near = Math.max(.2, baseDist * st.zoom / 1500); camera.far = 12000; camera.updateProjectionMatrix();
+    director.drive(camera);   // UI shell (embed): its tweened camera overrides the rig
+    // gables: damped spring towards target (slight overshoot, like lamps warming up)
+    const mood = MOODS[look === 'clay' ? 'day' : look], dusk = look === 'dusk' || look === 'golden', gk = look === 'golden' ? .5 : 1   /* golden hour: lamps on, half strength */;
+    let sum = 0, lit = 0;
+    for (const m of MOD) {
+      const goal = m.target * (1 + m.hover * .35);
+      m.vel += (goal - m.level) * 70 * dt; m.vel *= Math.exp(-dt * 11); m.level = Math.max(0, m.level + m.vel * dt);
+      m.glow.color.set(mood.glow.color).multiplyScalar(mood.glow.scale * (dusk ? m.level : 1));
+      m.wall.emissiveIntensity = (dusk ? gk * 1.7 : .16) * m.level * m.vary;
+      m.batten.emissiveIntensity = (dusk ? gk * 1.15 : .1) * m.level * m.vary;
+      m.battenB.emissiveIntensity = (dusk ? gk * .6 : .06) * m.level * m.vary;
+      sum += Math.min(m.level, 1); if (m.target > .5) lit++;
+    }
+    deckGlow.color.set(mood.glow.color).multiplyScalar(mood.glow.scale * (dusk ? .9 : 1));
+    const avg = sum / MOD.length, clay = look === 'clay';
+    intTimber.emissiveIntensity = (dusk ? gk * .32 : .03) * avg; intTimberDark.emissiveIntensity = (dusk ? gk * .22 : 0) * avg; intFloor.emissiveIntensity = (dusk ? gk * .28 : .02) * avg;
+    bounceBase.set(mood.hemi.ground); stage.rig.hemi.groundColor.copy(bounceBase).lerp(bounceWarm, clay || !dusk ? 0 : avg * .85);
+    lanternGlow.color.set(mood.glow.color).multiplyScalar(mood.glow.scale * (dusk ? 1.3 * avg : 1));
+    // UI (throttled: DOM writes ~10×/s, not every frame)
+    if ((uiTick += dt) > .1) { uiTick = 0;
+    $('m-glow').style.width = (avg * 100).toFixed(0) + '%'; $('m-glow-v').textContent = (avg * 100).toFixed(0) + '%';
+    $('m-focus').style.width = hoverMod ? (Math.min(hoverMod.level, 1.35) / 1.35 * 100).toFixed(0) + '%' : '0%';
+    $('m-focus-v').textContent = hoverMod ? 'G' + String(hoverMod.id + 1).padStart(2, '0') : '—';
+    $('t-lit').textContent = `${lit}/${MOD.length}`; $('t-zoom').textContent = (1 / st.zoom).toFixed(2) + '×';
+    $('s-state').textContent = lit ? (lit === MOD.length ? 'LIVE' : 'PARTIAL') : 'DARK'; $('status').classList.toggle('dark', !lit); }
+    // render + FPS + auto-downgrade
+    planesTick?.(dt); plasterU.uTime.value = now;
+    stage.composer.render();
+    if (fixedDt) return;
+    frames++; acc += dt; if (acc > .5) { $('t-fps').textContent = Math.round(frames / acc); if (!downgraded && performance.now() - t0 > 3500 && frames / acc < 34 && quality === 'high') { downgraded = true; setQuality('low'); } frames = 0; acc = 0; }
+  };
+  // UI shell director: hero framing (as the user's reference image) + component categories (Masar-style component mode)
+  const director = createDirector(stage, {
+    hero: { az: 335, el: 20, tx: -10, ty: 6, tz: -78, half: 150, fov: 30 },   // v03: the Apron view (user's choice); was the front elevation { az: 195, el: 3.2, tx: 16, ty: 13, tz: 32, half: 219 }
+    overview: { az: 205, el: 48, tx: 20, ty: 6, tz: 4, half: 330, fov: 30 },
+    components: [
+      { id: 'diagrid', label: 'Timber diagrid', layers: ['L_structure'], color: 0xffc450, stat: { big: '504 m frontage', small: '9 timber gables · 24 × 14.4 m diamonds' }, view: { az: 205, el: 26, tx: 16, ty: 12, tz: 30, half: 280 } },
+      { id: 'roof', label: 'Diamond roofs', layers: ['L_roof'], color: 0xf29a2e, stat: { big: '28.8 m peak', small: 'interlocking gables · slate shingles' }, view: { az: 165, el: 52, tx: 20, ty: 14, tz: 0, half: 290 } },
+      { id: 'glazing', label: 'Glazed hall', layers: ['L_glazing'], color: 0xfff3dc, stat: { big: '72 m deep hall', small: 'glass set behind a 2.2 m deep diagrid' }, view: { az: 200, el: 20, tx: -80, ty: 10, tz: 36, half: 130 } },
+      { id: 'hall', label: 'Hall interior', layers: ['L_interior'], color: 0xe8a48a, xray: true, stat: { big: '3 mezzanines', small: 'timber tree-columns · lantern-lit hall' }, view: { az: 190, el: 45, tx: -20, ty: 8, tz: 0, half: 170 } },
+      { id: 'forecourt', label: 'Forecourt deck', layers: ['L_deck', 'L_canopy'], color: 0xc8743a, stat: { big: '336 m raised forecourt', small: '4.4 m above the meadow · entrance canopy' }, view: { az: 215, el: 40, tx: 150, ty: 4, tz: 60, half: 190 } },
+      { id: 'aircraft', label: 'Aircraft', layers: ['L_aircraft'], color: 0xfff3dc, stat: { big: '3 aircraft', small: 'Boeing 747-200 on the runway · two A321s on the apron' }, view: { az: 330, el: 24, tx: -60, ty: 4, tz: -110, half: 250 } },
+      { id: 'runway', label: 'Runway & river', layers: ['runway', 'runway_embankment', 'runway_bridge', 'runway_markings', 'apron', 'stream'], color: 0xffc450, axis: 'x', stat: { big: 'Runway raised across the river', small: '45 m wide · bridged over the stream' }, view: { az: 200, el: 58, tx: 60, ty: 0, tz: -60, half: 480 } },
+    ],
+  });
+  renderer.setAnimationLoop(loop);
+
+  // ─────────────────────────────────────────────────────────── 12b · aircraft views (v02)
+  // Front = the fixed elevation rig above. The other views drive the director camera from here (only when the
+  // viewer picks one; inside the UI shell the shell owns the director and this stays idle).
+  const AV = {
+    aircraft: { az: 330, el: 24, tx: -60,  ty: 4, tz: -110, half: 250, fov: 30 },
+    apron:    { az: 335, el: 20, tx: -10,  ty: 6, tz: -78,  half: 150, fov: 30 },
+    jumbo:    { az: 150, el: 10, tx: -250, ty: 8, tz: -147, half: 60,  fov: 30 },
+    a321:     { az: 32,  el: 11, tx: -70,  ty: 5, tz: -72,  half: 44,  fov: 30 },
+  };
+  const VIEW_ORDER = ['front', 'aircraft', 'apron', 'jumbo', 'a321'];
+  const avGoal = { ...AV.aircraft }; let avOwn = false, avFollow = false, avView = 'front';
+  function setView(k) {
+    avView = k; press('[data-view]', k, 'view'); avFollow = false;
+    if (!AV[k]) { avOwn = false; director.director(false); return; }
+    if (!avOwn) { director.setCamera({ ...AV[k] }); director.director(true); avOwn = true; }
+    Object.assign(avGoal, AV[k]);
+  }
+  document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => setView(b.dataset.view));
+  $('a-takeoff').onclick = () => { takeOff(); setView('jumbo'); avFollow = true; Object.assign(avGoal, { az: 172, el: 20, half: 140 }); whoosh(); };
+  $('a-reset').addEventListener('click', () => setView('front')); el.addEventListener('dblclick', () => setView('front'));
+  addEventListener('keydown', e => { const k = e.key.toLowerCase();
+    if (k === '0') setView('front'); else if (k === 't') $('a-takeoff').click();
+    else if (k === 'v') setView(VIEW_ORDER[(VIEW_ORDER.indexOf(avView) + 1) % VIEW_ORDER.length]); });
+  { let dn = null;   // in the aircraft views: drag = orbit, wheel = zoom
+    el.addEventListener('pointerdown', e => { if (avOwn) dn = { x: e.clientX, y: e.clientY, az: avGoal.az, el: avGoal.el }; });
+    addEventListener('pointerup', () => dn = null);
+    addEventListener('pointermove', e => { if (!dn) return; avGoal.az = dn.az - (e.clientX - dn.x) * .25; avGoal.el = clamp(dn.el + (e.clientY - dn.y) * .15, 2, 85); });
+    el.addEventListener('wheel', e => { if (avOwn) avGoal.half = clamp(avGoal.half * (e.deltaY > 0 ? 1.12 : .89), 18, 700); }, { passive: true }); }
+  const avTick = () => {
+    if (avOwn && director.on) {
+      if (avFollow) { const j = stage.content.getObjectByName('aircraft_b747_runway');
+        if (j) { avGoal.tx = Math.min(j.position.x, 120); avGoal.ty = Math.min(j.position.y, 30) + 6; if (j.position.x < -240 && avGoal.tx > 0) avFollow = false; } }
+      const c = director.cam, k = avFollow ? .2 : .07;
+      for (const p of ['az', 'el', 'tx', 'ty', 'tz', 'half']) c[p] += (avGoal[p] - c[p]) * k;
+    }
+    requestAnimationFrame(avTick);
+  };
+  avTick();
+
+  // first frame, then reveal + light the terminal gable by gable (in the UI shell: golden, and the shell lights the gables gradually)
+  setHaze(100);
+  setLook('dusk');   // v03: Dusk in the UI shell too (was golden there), as in the teal mockup
+  if (!EMBED) setView('apron');
+  setTimeout(() => { $('loader').style.opacity = 0; setTimeout(() => $('loader')?.remove(), 900); if (!EMBED) setTimeout(() => { cascade(true); syncLightsButton(); }, 700); }, 60);
+
+  const report = validateModelSafe(); console.info('[O1] validate', report);
+  function validateModelSafe() { try { return stage.validate(root); } catch (e) { return { ok: false, errors: [String(e)] }; } }
+  window.__api = { stage, root, MOD, st, setLook, reset, setAircraftView: setView, takeOff: () => $('a-takeoff').click(), zoomAt, cascade, validate: () => stage.validate(root), tris: () => countTriangles(root),
+    setView(zoom = 1, panX = 0, panY = 0, yaw = 0, pitch = 0) { st.zoomT = st.zoom = zoom; st.panT.set(panX, panY, 0); st.pan.copy(st.panT); st.yawT = st.yaw = yaw; st.pitchT = st.pitch = pitch; },
+    lightsNow(v = 1) { MOD.forEach(m => { m.target = v; m.level = v; m.vel = 0; }); syncLightsButton(); },
+    step(n = 30) { fixedDt = 1 / 30; for (let i = 0; i < n; i++) loop(); fixedDt = 0; },
+    // UI shell
+    director, embedded: EMBED, gables: MOD.length,
+    /** light level of the i-th gable from the west (0..1+), set directly so a GSAP stagger can drive it */
+    setGableLevel(i, v) { const m = [...MOD].sort((a, b) => a.x - b.x)[i]; if (m) { m.target = v; m.level = v; m.vel = 0; } },
+    pause(v) { renderer.setAnimationLoop(v ? null : loop); if (!v) clock.getDelta(); },
+    warm() { loop(); clock.getDelta(); },   // render one frame while hidden: uploads textures before the reveal (no first-frame hitch)
+    setExposure(k) { renderer.toneMappingExposure = MOODS[look === 'clay' ? 'day' : look].exposure * k; } };
+  window.__ok = true;
+} catch (e) {
+  console.error(e); window.__err = String(e && e.stack || e);
+  const er = $('err'); er.hidden = false; er.textContent = 'Could not build the model: ' + e.message;
+  $('loader')?.remove();
+}
+</script>

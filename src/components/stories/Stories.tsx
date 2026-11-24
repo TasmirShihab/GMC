@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { PillButton } from '@/components/ui/PillButton'
-import { header, stories } from '@/content/home'
+import { stories } from '@/content/home'
 import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap'
-import { setOnCream } from '@/lib/headerTheme'
+import { headerZone, setOnCream } from '@/lib/headerTheme'
 import type { Outline } from '@/lib/outline'
 import { ridgeProfile } from '@/lib/pathPoints'
 
@@ -16,7 +16,7 @@ import s from './Stories.module.css'
 const items = stories.items
 const N = items.length
 /** Seconds each story stays before the next one comes in (the dash at the top fills over this time). */
-const AUTOPLAY = 7
+const AUTOPLAY = 5
 /** Pathway geometry, in SVG units: one stop is UNIT wide; the line is H tall with PAD above and below. */
 const UNIT = 100
 const H = 80
@@ -48,7 +48,7 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, w: numb
 /**
  * Stories: what each of the eight sectors could look like. Rebuilt from the sixth reference recording:
  *   cream heading block, then a rounded card that fills the screen with the story's picture,
- *   the GMC mark (the section's signature), the sector as a big title, Read the story, Prev / Next,
+ *   the sector as a big title, Read the story, Prev / Next,
  *   progress dashes on top, and along the bottom a pathway (the GMC outline's ridge, in the yellow
  *   route line) with a round stop per story; the current stop sits large in the middle.
  *   Changing story dissolves the picture away in islands, as the loader does.
@@ -261,11 +261,12 @@ export function Stories({ outline }: { outline: Outline }) {
           else timer.current?.pause()
         },
       })
+      // The photo card: light header while it is under the header (the cream heading above it keeps dark).
+      const offZone = headerZone(c, 'light')
       ScrollTrigger.create({
         trigger: c,
         pinnedContainer: reduced ? undefined : el,
         start: 'top top+=40',
-        onEnter: () => setOnCream(false),
         onLeaveBack: () => setOnCream(true),
       })
 
@@ -281,6 +282,7 @@ export function Stories({ outline }: { outline: Outline }) {
       c.addEventListener('pointerleave', onLeaveCard)
 
       return () => {
+        offZone()
         cancelled = true
         timer.current?.kill()
         window.removeEventListener('resize', draw)
@@ -339,8 +341,6 @@ export function Stories({ outline }: { outline: Outline }) {
         </div>
 
         <div ref={textRef} className={s.text} aria-live="polite">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className={s.mark} src={header.logo} alt="" />
           <h3 className={s.storyTitle}>{story.name}</h3>
           <PillButton href={story.href}>{stories.read}</PillButton>
         </div>

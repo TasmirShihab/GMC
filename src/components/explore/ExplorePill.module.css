@@ -1,58 +1,175 @@
-.pill {
+/* The floating stupa, bottom-right, shown once the hero has scrolled away.
+   Colours are variables so the disc and the drawing can take any colour. */
+
+.orb {
+  --orb-size: clamp(58px, 4.6vw, 78px);
+  --orb-bg: #3b1520;
+  --orb-ink: #c9a45f;
+  --orb-ring: rgb(201 164 95 / 0.55);
+  --orb-glow: rgb(214 176 98 / 0.55);
   position: fixed;
-  right: clamp(14px, 2.2vw, 44px);
-  bottom: clamp(14px, 4.3vh, 40px);
+  right: clamp(18px, 2.4vw, 48px);
+  bottom: clamp(18px, 4.3vh, 44px);
   z-index: 30;
-  display: grid;
-  place-items: center;
-  width: clamp(130px, 12.5vw, 260px);
-  aspect-ratio: 160 / 78;
-  overflow: hidden;
-  border-radius: 999px;
-  border: 2px solid rgb(246 237 211 / 0.9);
-  box-shadow: 0 12px 30px rgb(0 0 0 / 0.25);
+  display: block;
   text-decoration: none;
   opacity: 0;
   visibility: hidden;
-  translate: 0 12px;
+  translate: 0 14px;
   transition:
-    opacity 0.4s,
-    translate 0.4s var(--ease-settle),
-    visibility 0s 0.4s;
+    opacity 0.5s,
+    translate 0.6s var(--ease-settle),
+    visibility 0s 0.5s;
 }
 
 /* set by src/lib/headerTheme.ts once the hero has gone */
-:global(html[data-past-hero='1']) .pill {
+:global(html[data-past-hero='1']) .orb {
   opacity: 1;
   visibility: visible;
   translate: 0 0;
   transition:
-    opacity 0.4s,
-    translate 0.4s var(--ease-settle),
+    opacity 0.5s,
+    translate 0.6s var(--ease-settle),
     visibility 0s;
 }
 
-.pill img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: scale 0.6s var(--ease-settle);
+/* A slow drift: rising, leaning and settling over about nine seconds. */
+.float {
+  position: relative;
+  display: block;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  animation: drift 9s ease-in-out infinite;
 }
 
-.pill:hover img {
+@keyframes drift {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  25% {
+    translate: 0 -7px;
+    rotate: -3deg;
+  }
+  50% {
+    translate: 2px -3px;
+    rotate: 1.5deg;
+  }
+  75% {
+    translate: -2px -8px;
+    rotate: -1deg;
+  }
+}
+
+/* Soft golden light around the disc, breathing slowly. */
+.halo {
+  position: absolute;
+  inset: -55%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--orb-glow) 0%, rgb(214 176 98 / 0.18) 38%, transparent 68%);
+  pointer-events: none;
+  animation: breathe 6s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+    scale: 0.94;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.06;
+  }
+}
+
+.disc {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 2px solid var(--orb-ring);
+  border-radius: 50%;
+  background: var(--orb-bg);
+  box-shadow: 0 10px 26px -10px rgb(30 10 14 / 0.7);
+  transition:
+    scale 0.5s var(--ease-settle),
+    border-color 0.4s;
+}
+
+/* One part of the stupa: the whole drawing as a mask, cut to its band (base / middle / top). */
+.part {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44%;
+  aspect-ratio: 154 / 260;
+  translate: -50% -50%;
+  background: var(--orb-ink);
+  /* stupa-mark.png: the drawing with its lines thickened for button size (stupa-mask.png is the full-detail one) */
+  -webkit-mask: url('/images/stupa-mark.png') center / contain no-repeat;
+  mask: url('/images/stupa-mark.png') center / contain no-repeat;
+}
+
+/* class hooks for the build animation */
+.base,
+.middle,
+.top {
+  will-change: clip-path;
+}
+
+/* Hover: the disc swells a touch, the light brightens, and "Project 108" rises above it. */
+.orb:hover .disc,
+.orb:focus-visible .disc {
   scale: 1.08;
+  border-color: var(--orb-ink);
+}
+
+.orb:hover .halo {
+  animation-duration: 3s;
 }
 
 .label {
-  position: relative;
-  padding: 0.75em 1.2em;
+  /* "Project 108", above the disc on hover */
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 14px);
+  padding: 0.7em 1.1em;
   border-radius: 999px;
-  background: var(--c-yellow);
-  color: var(--c-brown);
-  font: 700 clamp(10px, 0.72vw, 15px) / 1 var(--font-sans);
+  background: var(--orb-bg);
+  color: var(--c-hero-text);
+  font: 700 var(--fs-nav) / 1 var(--font-sans);
   letter-spacing: 0.03em;
   text-transform: uppercase;
   white-space: nowrap;
+  opacity: 0;
+  translate: -50% 8px;
+  pointer-events: none;
+  box-shadow: 0 10px 24px -12px rgb(30 10 14 / 0.6);
+  transition:
+    opacity 0.3s,
+    translate 0.4s var(--ease-settle);
+}
+
+.orb:hover .label,
+.orb:focus-visible .label {
+  opacity: 1;
+  translate: -50% 0;
+}
+
+.orb:focus-visible {
+  outline: none;
+}
+
+.orb:focus-visible .disc {
+  box-shadow:
+    0 0 0 3px var(--c-paper),
+    0 0 0 5px var(--orb-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float,
+  .halo {
+    animation: none;
+  }
 }

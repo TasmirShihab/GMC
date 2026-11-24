@@ -1,0 +1,143 @@
+/* GMC Landmarks UI · golden theme
+   Type: Marcellus (titles, after the reference image) · Jost (categories + stats, after the video) · Alegreya Sans (small print) */
+:root {
+  color-scheme: dark;
+  --umber: #18130f; --void: #0a0705;
+  --ink: #fff3dc; --ink-2: rgba(255, 243, 220, .72); --ink-3: rgba(240, 225, 200, .45); --line: rgba(255, 228, 180, .18);
+  --honey: #ffc450; --amber: #f29a2e; --rose: #e8a48a; --copper: #c8743a;
+  /* point marker (user's diamond reference) */
+  --pt-halo: rgba(18, 92, 86, .5); --pt-fill: rgba(20, 112, 102, .85); --pt-edge: rgba(70, 200, 180, .85); --pt-core: #ffffff; --pt-glow: rgba(190, 255, 240, .85);
+  --f-title: "Marcellus", "Cinzel", "Trajan Pro", Georgia, serif;
+  --f-ui: "Jost", "Futura", "Century Gothic", system-ui, sans-serif;
+  --f-small: "Alegreya Sans", system-ui, sans-serif;
+  --gutter: clamp(16px, 3.2vw, 44px);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--void); color: var(--ink); font-family: var(--f-ui); overflow: hidden; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+button:focus-visible { outline: 2px solid var(--honey); outline-offset: 4px; border-radius: 6px; }
+
+/* ── layers ── */
+#frames, #sky, #fx, #vignette { position: fixed; inset: 0; }
+#frames iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; opacity: 0; visibility: hidden; background: var(--void); }
+#frames iframe.on { opacity: 1; visibility: visible; }
+#sky, #fx { pointer-events: none; opacity: 0; }
+#sky canvas, #fx canvas { display: block; width: 100%; height: 100%; }
+#vignette { pointer-events: none; background:
+  linear-gradient(180deg, rgba(10,7,5,.55) 0%, rgba(10,7,5,0) 26%, rgba(10,7,5,0) 62%, rgba(10,7,5,.72) 100%),
+  radial-gradient(120% 100% at 50% 40%, transparent 55%, rgba(10,7,5,.55) 100%); }
+
+/* ── top bar ── */
+#top { position: fixed; top: calc(var(--gutter) * .7); left: var(--gutter); right: var(--gutter); display: flex; align-items: center; justify-content: space-between; pointer-events: none; z-index: 5; }
+#top > * { pointer-events: auto; }
+.mark { font: 400 13px/1 var(--f-title); letter-spacing: .32em; color: var(--ink-2); display: flex; gap: 12px; align-items: center; }
+.mark i { width: 22px; height: 1px; background: var(--honey); display: inline-block; }
+#ideas { display: flex; gap: 4px; align-items: center; font-size: 10.5px; letter-spacing: .22em; color: var(--ink-3); }
+#ideas span { margin-right: 8px; }
+#ideas button { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; letter-spacing: .18em; }
+#ideas button[aria-pressed="true"] { color: var(--umber); background: var(--honey); border-color: transparent; }
+
+/* ── title (reference image) ── */
+#title { position: fixed; left: 50%; top: 21vh; transform: translateX(-50%); text-align: center; pointer-events: none; width: min(1100px, 92vw); z-index: 3; }
+/* contrast: a soft warm-dark pool of shade behind the title, so cream type reads over bright cloud as well as dark land */
+#title .scrim { position: absolute; left: -10%; right: -10%; top: -22%; bottom: -26%; z-index: -1; opacity: 0; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(22,14,8,.62) 0%, rgba(22,14,8,.42) 48%, rgba(22,14,8,.14) 78%, rgba(22,14,8,0) 100%); }
+#title .kind { font: 400 clamp(20px, 3.4vw, 46px)/1 var(--f-title); letter-spacing: .14em; color: #fbf3e6;
+  text-shadow: 0 1px 2px rgba(30,18,8,.75), 0 2px 18px rgba(10,7,5,.6); }
+#title .name { margin: .12em 0 0; font: 400 clamp(64px, 11vw, 158px)/.95 var(--f-title); letter-spacing: .06em; color: #f3e6d0; white-space: nowrap; }
+/* each letter carries the image's soft top-lit gradient + a carved shadow (so letters can animate on their own) */
+#title .ch { display: inline-block; will-change: transform, opacity;
+  background: linear-gradient(180deg, #fffdf6 0%, #f6ead6 55%, #dccbae 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: none; filter: drop-shadow(0 1px 1px rgba(45,28,12,.7)) drop-shadow(0 3px 10px rgba(25,15,8,.55)) drop-shadow(0 12px 30px rgba(10,7,5,.45)); }
+/* Explore sits right under the big name (user's markup on the hero) */
+#explore { display: inline-block; margin-top: clamp(14px, 2.2vh, 26px); pointer-events: auto; font: 400 12px/1 var(--f-ui); letter-spacing: .32em; text-transform: uppercase; color: var(--ink);
+  padding: 13px 24px; border: 1px solid rgba(255,228,180,.35); border-radius: 999px; background: rgba(24,19,15,.28); backdrop-filter: blur(6px); opacity: 0; }
+#explore:hover { border-color: var(--honey); color: var(--honey); }
+
+/* ── category rail (video) ── */
+#cats { position: fixed; left: var(--gutter); top: 16vh; z-index: 4; opacity: 0; pointer-events: none; }
+#cats.on { pointer-events: auto; }
+#cats .rail { position: absolute; left: 5px; top: 8px; bottom: 8px; width: 1px; background: var(--line); }
+#cats .slider { position: absolute; left: -3px; width: 7px; height: 7px; border-radius: 1px; background: var(--pt-core); transform: rotate(45deg);
+  box-shadow: 0 0 0 3px var(--pt-fill), 0 0 0 7px var(--pt-halo), 0 0 10px 3px var(--pt-glow); }
+#cats ul { list-style: none; margin: 0; padding: 0 0 0 26px; display: grid; gap: 20px; }
+#cats li button { font: 400 11px/1.2 var(--f-ui); letter-spacing: .26em; text-transform: uppercase; color: var(--ink-3); transition: color .4s; text-align: left; }
+#cats li button:hover { color: var(--ink-2); }
+#cats li.on button { color: var(--ink); }
+#cats .head { font: 400 10px/1 var(--f-ui); letter-spacing: .3em; color: var(--honey); margin: 0 0 22px 26px; text-transform: uppercase; }
+
+/* ── stat (video, bottom-left) ── */
+#stat { position: fixed; left: var(--gutter); bottom: 22vh; display: flex; gap: 22px; align-items: center; z-index: 4; pointer-events: none; opacity: 0; }
+#stat .lines { overflow: hidden; }
+#stat .big { font: 300 clamp(26px, 3vw, 44px)/1.08 var(--f-ui); color: #f6ecdc; letter-spacing: .01em; }
+#stat .small { font: 300 clamp(15px, 1.5vw, 22px)/1.3 var(--f-ui); color: var(--ink-2); margin-top: 4px; }
+
+
+/* ── chapter dots (reference image, bottom-left) ── */
+#dots { position: fixed; left: var(--gutter); bottom: calc(var(--gutter) * .9); display: flex; gap: clamp(26px, 4.6vw, 64px); align-items: flex-end; z-index: 5; }
+#dots button { position: relative; width: 38px; height: 38px; display: grid; place-items: center; }
+/* points are the user's diamond marker: dark-teal halo diamond → teal diamond → glowing white core */
+#dots button::before { content: ""; width: 6px; height: 6px; border-radius: 1px; background: var(--ink); opacity: .85; transform: rotate(45deg);
+  transition: transform .5s cubic-bezier(.16,1,.3,1), background .4s, box-shadow .4s; position: relative; z-index: 1; }
+#dots button.soon::before { opacity: .38; }
+#dots button .ring { position: absolute; inset: 3px; border-radius: 2px; background: var(--pt-halo); opacity: 0; transform: rotate(45deg) scale(.4); transition: opacity .5s, transform .6s cubic-bezier(.16,1,.3,1); }
+#dots button .ring::after { content: ""; position: absolute; inset: 6px; border-radius: 1px; background: var(--pt-fill); border: 1px solid var(--pt-edge); box-shadow: 0 0 10px rgba(60,191,170,.35); }
+#dots button.on .ring { opacity: 1; transform: rotate(45deg) scale(1); }
+#dots button.on::before { background: var(--pt-core); transform: rotate(45deg) scale(1.15); box-shadow: 0 0 8px 2px var(--pt-glow), 0 0 2px #fff; opacity: 1; }
+#dots button .lab { position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%); white-space: nowrap; text-align: center;
+  font: 400 9.5px/1.25 var(--f-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--ink); opacity: 0; transition: opacity .4s; }
+#dots button.on .lab, #dots button:hover .lab { opacity: 1; }
+#dots button:hover .lab { color: var(--ink-2); }
+
+/* ── mini-map (reference image, bottom-right) ── */
+#map { position: fixed; z-index: 4; }
+/* no box: the island floats on a transparent canvas whose edges fade into whatever is behind it */
+#map-gl { -webkit-mask-image: radial-gradient(ellipse closest-side at 50% 50%, #000 72%, transparent 100%); mask-image: radial-gradient(ellipse closest-side at 50% 50%, #000 72%, transparent 100%); }
+#map.big #map-gl { -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, #000 70%, transparent 100%); mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, #000 70%, transparent 100%); }
+#map::before { content: ""; position: absolute; inset: 0; background: radial-gradient(90% 80% at 50% 45%, rgba(42,28,18,.0), rgba(10,7,5,.0)); transition: background .6s; pointer-events: none; }
+#map.big::before { background: radial-gradient(90% 80% at 50% 45%, #2a1c12 0%, #0a0705 100%); }
+#map-gl { position: absolute; inset: 0; }
+#map-tip { position: absolute; pointer-events: none; padding: 7px 10px; border-radius: 10px; background: rgba(24,19,15,.85); border: 1px solid var(--line);
+  font: 400 10px/1.35 var(--f-ui); letter-spacing: .18em; text-transform: uppercase; color: var(--ink); opacity: 0; transform: translate(12px, -50%); transition: opacity .2s; white-space: nowrap; }
+#map-tip b { display: block; color: var(--honey); font-weight: 400; }
+#map .hint { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font: 400 11px var(--f-ui); letter-spacing: .3em; color: var(--ink-2); opacity: 0; pointer-events: none; text-transform: uppercase; }
+#map.big.pick .hint { opacity: 1; transition: opacity .6s .6s; }
+
+/* ── back (video, right) ── */
+#back { position: fixed; right: var(--gutter); top: 50%; transform: translateY(-50%); z-index: 5; display: grid; justify-items: end; gap: 12px; opacity: 0; pointer-events: none;
+  font: 400 10px/1.4 var(--f-ui); letter-spacing: .28em; text-transform: uppercase; color: var(--ink-2); text-align: right; }
+#back.on { pointer-events: auto; }
+#back .circle { width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(255,228,180,.4); display: grid; place-items: center; transition: border-color .3s, background .3s; }
+#back .circle::after { content: ""; width: 9px; height: 9px; border-left: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); transform: translateX(2px) rotate(45deg); transition: transform .3s, border-color .3s; }   /* back chevron ‹ */
+#back:hover .circle::after { border-color: var(--honey); transform: translateX(0) rotate(45deg); }
+#back:hover .circle { border-color: var(--honey); background: rgba(255,196,80,.08); }
+
+/* ── loader + toast ── */
+#loader { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(circle at 50% 55%, #241d18, var(--void) 72%); }
+#loader .box { text-align: center; }
+#loader .flame { width: 14px; height: 14px; border-radius: 50%; margin: 0 auto 18px; background: radial-gradient(circle, #fff3dc, #ffc450 45%, rgba(254,120,40,0) 72%); box-shadow: 0 0 22px 6px rgba(255,170,60,.35); animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(1.25); opacity: .75; } }
+#loader .t { font: 400 12px var(--f-title); letter-spacing: .36em; color: var(--ink-2); }
+#loader .bar { width: 180px; height: 1px; background: var(--line); margin: 16px auto 0; overflow: hidden; }
+#loader .bar i { display: block; height: 100%; width: 0; background: var(--honey); transition: width .3s; }
+#loader .start { margin-top: 26px; font: 400 11px var(--f-ui); letter-spacing: .32em; text-transform: uppercase; padding: 13px 26px; border: 1px solid rgba(255,228,180,.4); border-radius: 999px; opacity: 0; pointer-events: none; }
+#loader .start.on { opacity: 1; pointer-events: auto; transition: opacity .6s; }
+#loader .start:hover { border-color: var(--honey); color: var(--honey); }
+#toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 9; padding: 11px 18px; border-radius: 999px; background: rgba(24,19,15,.82); border: 1px solid var(--line);
+  font: 400 11px var(--f-ui); letter-spacing: .2em; text-transform: uppercase; color: var(--ink-2); opacity: 0; pointer-events: none; }
+#err { position: fixed; right: 16px; bottom: 16px; color: #ff8a8d; font: 12px ui-monospace, monospace; z-index: 30; max-width: 60vw; }
+
+@media (max-width: 760px) {
+  #title { top: 15vh; }
+  #cats { top: 12vh; } #cats ul { gap: 14px; }
+  #stat { bottom: 26vh; }
+  #dots { gap: 14px; } #dots button .lab { display: none; }
+  #back { top: auto; bottom: 120px; }
+  #ideas span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { #loader .flame { animation: none; } }
+
+/* static corner map (replaces the interactive mini-map) */
+#map.static { pointer-events: none; }
+#map.static #map-gl { -webkit-mask-image: none; mask-image: none; }
+#map.static #map-gl img { width: 100%; height: 100%; object-fit: contain; display: block; }

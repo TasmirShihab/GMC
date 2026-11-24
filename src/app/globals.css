@@ -33,6 +33,15 @@
   --ease-breath: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* Text roles (desktop floors: 13px for anything, 14px for navigation and reading text).
+     meta: sources, credits, small tags · label: small caps kickers, roles, numbers, sector names
+     nav: header links, prev/next, cues, buttons · body-sm: card copy · body: section paragraphs */
+  --fs-meta: clamp(13px, 0.15vw + 11px, 14px);
+  --fs-label: clamp(13px, 0.2vw + 10.5px, 15px);
+  --fs-nav: clamp(14px, 0.25vw + 11px, 16px);
+  --fs-body-sm: clamp(14px, 0.3vw + 10.5px, 16px);
+  --fs-body: clamp(15px, 0.45vw + 9.5px, 19px);
+
   --step-0: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
   --step-1: clamp(1.25rem, 1.1rem + 0.6vw, 1.6rem);
   --step-3: clamp(2rem, 1.4rem + 2.6vw, 3.8rem);

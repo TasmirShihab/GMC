@@ -5,7 +5,7 @@ import s from './PillButton.module.css'
 interface PillButtonProps {
   href: string
   children: ReactNode
-  /** primary: solid yellow · secondary: outlined, for use over photos and video */
+  /** primary: solid yellow · secondary: words + icon, for use over photos and video */
   variant?: 'primary' | 'secondary'
   icon?: 'play' | 'arrow'
   className?: string

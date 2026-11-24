@@ -64,6 +64,15 @@ Save-Data → native scroll, no reveal motion, same content.
 - Every number on screen needs a source and an "as of" date.
 - New 3D pieces: build and tune in `/lab` first, then move into a chapter.
 
+## Hidden sections
+
+Home-page sections can be switched off without deleting them: `src/lib/features.ts` holds one flag per
+section, and `src/app/page.tsx` renders a section only when its flag is `true`. All code, styles, copy and
+assets stay in the repo.
+
+- `weave`: "The weave opens onto the city" (the GMC mark with video quadrants and the river, between
+  Welcome and About). Hidden since 24 Nov 2026, to come back later: set `weave: true` to restore it.
+
 ## Verified facts (gmc.bt, checked 23 Nov 2026)
 
 - 4,046 km², about 10% of Bhutan; southern plains bordering Assam (India)

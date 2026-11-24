@@ -7,6 +7,7 @@ import { PillButton } from '@/components/ui/PillButton'
 import { invest } from '@/content/home'
 import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap'
 import { setOnCream } from '@/lib/headerTheme'
+import { tilt } from '@/lib/tilt'
 
 import { Dissolve } from '../intro/dissolve'
 import { drawTopo } from '../intro/topo'
@@ -198,7 +199,11 @@ export function Invest() {
       prev.addEventListener('click', onPrev)
       next.addEventListener('click', onNext)
 
+      // Hover tilt on each sector card.
+      const offTilt = tilt(cards)
+
       return () => {
+        offTilt()
         cancelled = true
         window.removeEventListener('resize', draw)
         window.removeEventListener('resize', sizeGround)

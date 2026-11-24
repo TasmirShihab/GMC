@@ -42,8 +42,9 @@ export const hero = {
     secondary: { label: 'Take a tour', href: '#watch' },
   },
   scrollCue: 'Scroll to explore',
-  unmute: 'Unmute',
-  mute: 'Mute',
+  sound: 'Video sound',
+  unmute: 'Turn the video sound on',
+  mute: 'Turn the video sound off',
   /**
    * Hero media. Put the file in /public and set it here, e.g. { type: 'video', src: '/video/hero.mp4', poster: '/images/hero.jpg' }.
    * null shows a neutral placeholder gradient.
@@ -68,6 +69,20 @@ export const welcome = {
     '/images/gmc/campus-park.jpg',
     '/images/gmc/dam-valley.jpg',
   ],
+}
+
+/** The GMC mark, read as a map: a river through the middle, the four woven quadrants playing video. */
+export const weave = {
+  script: 'The mark',
+  heading: ['The weave opens', 'onto the city'],
+  body: [
+    'A river runs through the middle of it in a single S-curve, and the four woven quadrants are the ground that river divides, two above and two below. Around them, pinwheel corners in indigo and slate turn the square the way a mandala turns. One tile, in saffron, is left bright.',
+  ],
+  /** Placeholder until the four quadrant clips arrive: each quadrant shows a different part of this one video. */
+  video: { src: '/video/hero.mp4', poster: '/images/hero-video-poster.jpg' },
+  quadrants: ['The plain', 'The water', 'The site', 'The craft'],
+  pause: 'Pause the videos',
+  play: 'Play the videos',
 }
 
 export const about = {
@@ -201,7 +216,7 @@ export const stories = {
   kicker: 'Stories',
   title: ['How the city', 'takes shape'],
   body: 'Placeholder: eight priority sectors, eight parts of one city. Step along the path to see how each one could look.',
-  read: 'Read the story',
+  read: "Let's Explore",
   prev: 'Prev. story',
   next: 'Next story',
   items: [
@@ -216,4 +231,271 @@ export const stories = {
   ],
 }
 
-export const explore = { label: 'Explore in 3D', href: '#map', image: '/images/hero-campus.jpg' }
+/**
+ * Chapter 06 · The People: the GMCA Board of Directors, from the user's screenshot of the board listing.
+ * Portraits to come from the user (`portrait: null` leaves an empty slot until then).
+ */
+export const people = {
+  script: 'Leadership',
+  title: ['Woven by', 'many hands'],
+  chair: 'GMCA Board of Directors · Chaired by His Majesty The King',
+  body: 'Global and Bhutanese stewardship across aviation, infrastructure, law, education and green finance.',
+  /** The board is shown in groups (left: the group's name; right: its portraits). */
+  groups: [
+    { id: 'executive', title: ['Co-Chief', 'Executives'] },
+    { id: 'board', title: ['Board of', 'Directors'] },
+  ],
+  members: [
+    {
+      name: 'Seow Hiang Lee',
+      portrait: '/images/board/seow-hiang-lee.webp',
+      group: 'executive',
+      role: 'Co-Chief Executive Officer & Board Member',
+      bio: 'Founding CEO of Changi Airport Group (2009–2024); led Jewel Changi and Terminal 4.',
+    },
+    {
+      name: 'Yee Ean Pang',
+      portrait: '/images/board/yee-ean-pang.webp',
+      group: 'executive',
+      role: 'Co-Chief Executive Officer & Board Member',
+      bio: 'Former Director General of Investments at AIIB and CEO of Surbana Jurong Capital.',
+    },
+    {
+      name: 'Siddharth Shah',
+      portrait: '/images/board/siddharth-shah.webp',
+      group: 'board',
+      role: 'Board Director',
+      bio: 'Partner at Khaitan & Co; 25 years in corporate law, investment funds and regulatory advisory.',
+    },
+    {
+      name: "Joichi 'Joi' Ito",
+      portrait: '/images/board/joi-ito.webp',
+      group: 'board',
+      role: 'Board Member · CEO, Gelephu Investment and Development Corporation',
+      bio: 'President of Chiba Institute of Technology; former Director of MIT Media Lab (2011–2019).',
+    },
+    {
+      name: 'Dasho Arun Kapur',
+      portrait: '/images/board/arun-kapur.webp',
+      group: 'board',
+      role: 'Board Member',
+      bio: "Founder of Druk Gyalpo's Institute (DGI) and architect of the Bhutan Baccalaureate.",
+    },
+    {
+      name: 'Lauren Chung',
+      portrait: '/images/board/lauren-chung.webp',
+      group: 'board',
+      role: 'Board Member',
+      bio: 'CEO of Teneo Asia-Pacific Strategy & Communications; Co-Chair, WEF Global Future Council on Trade.',
+    },
+    {
+      name: 'Dechen Dorji',
+      portrait: '/images/board/dechen-dorji.webp',
+      group: 'board',
+      role: 'Board Member',
+      bio: 'Vice President for Asia, Wildlife Conservation at WWF-US; first Coordinator of De-suung.',
+    },
+    {
+      name: 'Sonam Choden',
+      portrait: '/images/board/sonam-choden.webp',
+      group: 'board',
+      role: 'Board Member',
+      bio: "Program Officer at His Majesty's Secretariat; civil engineer and Certified Arbitrator.",
+    },
+    {
+      name: 'Jigdrel Singay',
+      portrait: '/images/board/jigdrel-singay.webp',
+      group: 'board',
+      role: 'Board Member',
+      bio: 'Associate Director of GreenDigital (GDL / GIDC); led the 600 MW green HPC data centre FDI.',
+    },
+  ] as {
+    name: string
+    group: 'executive' | 'board'
+    role: string
+    bio: string
+    portrait?: string
+  }[],
+}
+
+/**
+ * Partners: the house heading and a slow, endless row of partner logos, all in one colour, no tiles.
+ * Logos from the user (24 Nov 2026), converted to brown on transparent and trimmed to the ink.
+ * `scale` evens out how big each looks: same visual area whatever its shape (wide marks shorter, compact
+ * marks taller), nudged for how heavy or light its strokes are.
+ */
+export const partners = {
+  script: 'Together',
+  title: ['Our partners'],
+  logos: [
+    { name: 'BIG', src: '/images/partners/big.png', scale: 0.94 },
+    { name: 'Changi Airport Singapore', src: '/images/partners/changi.png', scale: 1.3 },
+    { name: 'Arup', src: '/images/partners/arup.png', scale: 0.83 },
+    { name: 'MQDC', src: '/images/partners/mqdc.png', scale: 0.91 },
+    { name: 'SOM', src: '/images/partners/som.png', scale: 1.17 },
+    { name: 'Teneo', src: '/images/partners/teneo.png', scale: 0.74 },
+    { name: 'ERM', src: '/images/partners/erm.png', scale: 1.07 },
+    { name: 'Bensley', src: '/images/partners/bensley.png', scale: 0.63 },
+    { name: 'Cumberland, a DRW company', src: '/images/partners/cumberland.png', scale: 0.73 },
+    { name: 'BIT', src: '/images/partners/bit.png', scale: 1.04 },
+  ] as { name: string; src: string; scale: number }[],
+}
+
+/**
+ * The people's project: the Zhabtog (national volunteer service) call, copy from the user's screenshot.
+ * Photo from the user (GMCA Zhabtog programme). The 40,000 figure still needs a source + as-of date.
+ */
+export const zhabtog = {
+  script: "The people's project",
+  title: ['Zhabtog & Pelsung', 'volunteers'],
+  place: '40,000 community builders, Gelephu',
+  quote:
+    "Forty thousand hands came to the Mau Chhu river banks together to raise 108 Jangchub Chortens in a single day, because this is the people's project.",
+  actions: {
+    primary: { label: 'Join Zhabtog & Volunteering', href: '#volunteer' },
+    secondary: { label: 'Read Zhabtog dispatch', href: '#zhabtog-dispatch' },
+  },
+  image: {
+    src: '/images/zhabtog-volunteers.webp',
+    alt: 'Zhabtog volunteers in uniform walking along a road in Gelephu',
+    credit: 'Photo: GMCA · Zhabtog volunteer programme',
+  },
+}
+
+/**
+ * Chapter 07 · Take part, "Your thread starts here": six ways in, as cards scattered over one still render.
+ * Copy from the user's screenshot of the earlier build.
+ */
+export const thread = {
+  script: 'Take part',
+  title: ['Your thread', 'starts here'],
+  image: '/images/gmc/campus-stream.jpg',
+  doors: [
+    { title: 'Invest', text: 'Find your sector, read the rules, and talk to the Economic Development Group.', href: '#invest' },
+    { title: 'Live', text: 'Housing, schools and health care as the first quarters open.', href: '#live' },
+    { title: 'Work', text: 'Roles at the Authority and across the companies building the city via GMC dot.OFFER.', href: '#work' },
+    { title: 'Visit', text: 'Plan a trip: the Experience Centre, the 14 Royal Kasho sacred sites, the river trails.', href: '#visit' },
+    { title: 'Participate', text: 'Open consultations, Zhabtog volunteering, and Project 108.', href: '#zhabtog' },
+    {
+      title: 'Immigration',
+      text: '100% online E-Visas, Employment & Special Passes, Indian e-Permits, and vehicle border registration.',
+      href: 'https://immigration.gmc.bt',
+      site: 'immigration.gmc.bt',
+    },
+  ] as { title: string; text: string; href: string; site?: string }[],
+}
+
+/**
+ * FAQ, after Take part. Questions and the first answer from the user's screenshots of gmc.bt (24 Nov 2026).
+ * Answers 2, 3 and 5 are written from facts already on this page (verified on gmc.bt, 23 Nov 2026);
+ * answer 4 is a placeholder until the gmc.bt text arrives.
+ */
+export const faq = {
+  script: 'Good to know',
+  title: ['Frequently', 'asked questions'],
+  items: [
+    {
+      q: 'What is Gelephu Mindfulness City (GMC) and what is its founding vision?',
+      a: 'Gelephu Mindfulness City (GMC) is His Majesty King Jigme Khesar Namgyel Wangchuck\u2019s global vision to establish an oasis of mindfulness and prosperity amidst increasing global uncertainties and geostrategic challenges. It seeks to offer the world a different path of development, through \u201cMindful Prosperity\u201d, where traditional Bhutanese values of spirituality and harmony with nature blend with innovation, technology and economic vibrancy. GMC also serves as His Majesty\u2019s domestic vision to act as a catalyst to lead Bhutan\u2019s administrative reforms and economic advancement under the concept of \u201cOne Country, Two Systems\u201d as part of a Special Administrative Region (SAR).',
+    },
+    {
+      q: 'Where is GMC located, how was it established, and what is its governance structure?',
+      a: 'GMC covers 4,046 km\u00b2, about 10% of Bhutan, on the southern plains bordering Assam, between Royal Manas National Park and Phibsoo Wildlife Sanctuary. Announced by His Majesty on National Day, 17 December 2023, it was established by Royal Charter in February 2024 as a highly autonomous Special Administrative Region with its own executive, legislative and independent judicial powers.',
+    },
+    {
+      q: 'Who leads GMC and what are its management principles?',
+      a: 'GMC is led by the Gelephu Mindfulness City Authority (GMCA), whose Board of Directors is chaired by His Majesty The King. Day to day, the Authority is run by its two Co-Chief Executive Officers, with a board that brings together global and Bhutanese experience in aviation, infrastructure, law, education and green finance.',
+    },
+    {
+      q: "What is the 'Diamond Strategy' and how are GMC and Bhutan expected to evolve?",
+      a: 'Placeholder: the answer from gmc.bt goes here.',
+    },
+    {
+      q: 'What makes GMC different from Bhutan and other jurisdictions?',
+      a: 'GMC is a Special Administrative Region under \u201cOne Country, Two Systems\u201d: part of Bhutan, but with its own executive, legislative and independent judicial powers. That lets it set its own rules for business and investment while carrying Bhutanese values of mindfulness, culture and care for nature.',
+    },
+  ],
+}
+
+/**
+ * Footer. Links merge the current gmc.bt footer (Home, About us, Map, Pillars, Gallery, People, Article, FAQ,
+ * Public Consultation, Privacy Policy, Contact; Facebook, X, Instagram) with the brief's structure: the
+ * ways to take part, and GMCA's official pages one click away. Hrefs are anchors on this page where the
+ * section exists, placeholders otherwise.
+ */
+export const footer = {
+  image: '/images/gmc/rice-fields.jpg',
+  /** Four groups, each answering one visitor question: what is it, how do I join, what's new, who runs it. */
+  columns: [
+    {
+      title: 'The city',
+      links: [
+        { label: 'About GMC', href: '#about' },
+        { label: "His Majesty's vision", href: '#vision' },
+        { label: 'Priority sectors', href: '#invest' },
+        { label: 'Masterplan & 3D map', href: '#map' },
+        { label: 'Gallery', href: '#gallery' },
+      ],
+    },
+    {
+      title: 'Take part',
+      links: [
+        { label: 'Invest', href: '#invest' },
+        { label: 'Work & careers', href: '#work' },
+        { label: 'Live', href: '#live' },
+        { label: 'Visit', href: '#visit' },
+        { label: 'Zhabtog volunteering', href: '#zhabtog' },
+        { label: 'Project 108', href: '#project-108' },
+      ],
+    },
+    {
+      title: 'Stay informed',
+      links: [
+        { label: 'News & articles', href: '#news' },
+        { label: 'Public consultation', href: '#consultation' },
+        { label: 'People', href: '#people' },
+        { label: 'FAQ', href: '#faq' },
+      ],
+    },
+    {
+      title: 'The Authority',
+      links: [
+        { label: 'About GMCA', href: '#gmca' },
+        { label: 'Leadership', href: '#people' },
+        { label: 'Legislation', href: '#legislation' },
+        { label: 'Notices', href: '#notices' },
+        { label: 'Publications', href: '#publications' },
+        { label: 'Contact', href: '#contact' },
+      ],
+    },
+  ],
+  connect: 'Connect',
+  legal: [
+    { label: 'Privacy policy', href: '#privacy' },
+    { label: 'Terms of use', href: '#terms' },
+    { label: 'Accessibility', href: '#accessibility' },
+  ],
+  cta: { label: 'Invest in GMC', href: '#invest' },
+  wordmark: ['Gelephu', 'Mindfulness City'],
+  place: 'Rooted in Gelephu, Bhutan',
+  rights: '\u00a9 2026 Gelephu Mindfulness City Authority',
+  languages: [
+    { label: 'EN', lang: 'en', current: true },
+    { label: '\u0f62\u0fab\u0f7c\u0f44\u0f0b\u0f41', lang: 'dz', current: false },
+  ],
+  social: [
+    { name: 'Facebook', href: '#facebook' },
+    { name: 'X', href: '#x' },
+    { name: 'Instagram', href: '#instagram' },
+  ] as { name: 'Facebook' | 'X' | 'Instagram'; href: string }[],
+}
+
+/** The full-screen 3D map (the GMC City 3D Section build, served from /3d-map), opened from "3D Map". */
+export const map3d = {
+  src: '/3d-map/index.html',
+  title: 'Gelephu Mindfulness City in 3D',
+  back: 'Back to GMC',
+}
+
+/** The floating stupa button, bottom-right: leads to the Project 108 page (link to come). */
+export const project108 = { label: 'Project 108', href: '#project-108' }

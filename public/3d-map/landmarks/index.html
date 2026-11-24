@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GMC Landmarks Idea 1</title>
+<style>#ideas{display:none!important}</style>
+<link rel="stylesheet" href="/3d-map/vendor/fonts/fonts.css">
+<link rel="stylesheet" href="ui/ui.css">
+<!-- the import map comes before any module load (including the preloads below) -->
+<script type="importmap">
+{ "imports": {
+  "three": "/3d-map/vendor/three/build/three.module.js",
+  "three/addons/": "/3d-map/vendor/three/addons/",
+  "gmc-kit": "./shared/gmc-kit.js",
+  "gmc-clouds": "./shared/gmc-clouds.js"
+} }
+</script>
+<!-- fetch the heavy modules in parallel with the page (the model iframe reuses them from the HTTP cache) -->
+<link rel="modulepreload" href="/3d-map/vendor/three/build/three.module.js">
+<link rel="modulepreload" href="./shared/gmc-kit.js">
+<link rel="modulepreload" href="./shared/gmc-recipes.js">
+<link rel="modulepreload" href="./shared/gmc-clouds.js">
+</head>
+<body>
+<div id="frames" aria-label="Landmark 3D model"></div>
+<div id="sky" aria-hidden="true"></div>
+<div id="fx" aria-hidden="true"></div>
+<div id="vignette" aria-hidden="true"></div>
+
+<header id="top">
+  <div class="mark"><i></i>GELEPHU MINDFULNESS CITY</div>
+  <div id="ideas" role="group" aria-label="Transition idea">
+    <span>IDEA</span>
+    <button data-intro="1" aria-pressed="false" title="Descent through the cloud sea">01</button>
+    <button data-intro="3" aria-pressed="false" title="The video's own transition">03</button>
+  </div>
+</header>
+
+<section id="title" aria-live="polite">
+  <div class="scrim" aria-hidden="true"></div>
+  <div class="kind"></div>
+  <h1 class="name"></h1>
+  <button id="explore" type="button">Explore</button>
+</section>
+
+<nav id="cats" aria-label="Components">
+  <div class="head"></div>
+  <div class="rail"><i class="slider"></i></div>
+  <ul></ul>
+</nav>
+
+<div id="stat" aria-live="polite">
+  <div class="lines"><div class="big"></div><div class="small"></div></div>
+</div>
+
+
+<nav id="dots" aria-label="Landmarks"></nav>
+
+<div id="map" aria-label="Map of Gelephu Mindfulness City"><div id="map-gl"></div><div id="map-tip"></div><div class="hint">Choose a landmark</div></div>
+
+<button id="back" type="button"><span class="circle" aria-hidden="true"></span><span class="txt">Back to<br>the map</span></button>
+
+<div id="loader"><div class="box">
+  <div class="flame"></div>
+  <div class="t">GELEPHU MINDFULNESS CITY</div>
+  <div class="bar"><i></i></div>
+  <button class="start" type="button">Enter</button>
+</div></div>
+<div id="toast"></div>
+<div id="err" hidden></div>
+
+<script src="/3d-map/vendor/gsap/gsap.min.js"></script>
+<script src="/3d-map/vendor/gsap/Observer.min.js"></script>
+<script src="/3d-map/vendor/gsap/CustomEase.min.js"></script>
+<script type="module" src="ui/director.js"></script>
+</body>
+</html>

@@ -10,34 +10,11 @@ import { useExperience } from '@/lib/store'
 
 import s from './Hero.module.css'
 
-function SpeakerIcon({ muted }: { muted: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />
-      {muted ? (
-        <path d="M16 9.5l5 5m0-5l-5 5" />
-      ) : (
-        <>
-          <path d="M15.5 9a4.2 4.2 0 0 1 0 6" />
-          <path d="M18 6.5a8 8 0 0 1 0 11" />
-        </>
-      )}
-    </svg>
-  )
-}
-
 /** Full-screen hero under the loader. The scroll cue and sound toggle arrive as the loader dissolves. */
 export function Hero() {
   const root = useRef<HTMLElement>(null)
   const video = useRef<HTMLVideoElement>(null)
+  const soundBtn = useRef<HTMLButtonElement>(null)
   const [muted, setMuted] = useState(true)
   /** Once the visitor uses the Mute / Unmute button, their choice wins over the automatic start. */
   const userChose = useRef(false)
@@ -95,7 +72,7 @@ export function Hero() {
   useGSAP(
     () => {
       const q = gsap.utils.selector(root)
-      const cue = q(`.${s.cue}, .${s.sound}, .${s.actions}`)
+      const cue = [...q(`.${s.cue}, .${s.actions}`), soundBtn.current].filter(Boolean)
       const card = q(`.${s.card}`)
 
       // Scrolling out: the hero holds still, then shrinks, tilts and flies up like a postcard,
@@ -110,8 +87,15 @@ export function Hero() {
             pin: true,
             pinSpacing: false,
             onUpdate: (self) => setHeroGone(self.progress > 0.55),
-            onLeave: () => video.current?.pause(),
-            onEnterBack: () => video.current?.play().catch(() => undefined),
+            // The sound toggle stays fixed bottom-left while the hero is on screen, and goes with it.
+            onLeave: () => {
+              video.current?.pause()
+              gsap.to(soundBtn.current, { autoAlpha: 0, duration: 0.3 })
+            },
+            onEnterBack: () => {
+              video.current?.play().catch(() => undefined)
+              gsap.to(soundBtn.current, { autoAlpha: 1, duration: 0.3 })
+            },
           },
         })
         .to(card, { '--frame': '10px', scale: 0.92, rotate: -2, duration: 0.3, ease: 'power1.in' })
@@ -141,84 +125,93 @@ export function Hero() {
 
   const media = hero.media
   return (
-    <section ref={root} id="top" className={s.hero}>
-      <div className={s.card}>
-        <div className={s.media}>
-          {media?.type === 'video' && (
-            <video
-              ref={video}
-              src={media.src}
-              poster={media.poster}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              data-intro-wait
-            />
-          )}
-          {media?.type === 'image' && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={media.src} alt="" data-intro-wait />
-          )}
-          {!media && <div className={s.placeholder} aria-hidden />}
-        </div>
-        {/* Shades the top, middle and bottom so header, title and cue stay readable on any footage. */}
-        <div className={s.shade} aria-hidden />
+    <>
+      <section ref={root} id="top" className={s.hero}>
+        <div className={s.card}>
+          <div className={s.media}>
+            {media?.type === 'video' && (
+              <video
+                ref={video}
+                src={media.src}
+                poster={media.poster}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                data-intro-wait
+              />
+            )}
+            {media?.type === 'image' && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={media.src} alt="" data-intro-wait />
+            )}
+            {!media && <div className={s.placeholder} aria-hidden />}
+          </div>
+          {/* Shades the top, middle and bottom so header, title and cue stay readable on any footage. */}
+          <div className={s.shade} aria-hidden />
 
-        {/* One heading in three voices: small spaced caps, the big display word, a script flourish. */}
-        <div className={s.center}>
-          <h1 className={s.heading}>
-            <span className={s.welcome}>{hero.welcome}</span> <span className={s.title}>{hero.title}</span>{' '}
-            <span className={s.subtitle}>{hero.subtitle}</span>
-          </h1>
-          <div className={s.actions}>
-            <PillButton href={hero.actions.primary.href}>{hero.actions.primary.label}</PillButton>
-            <PillButton href={hero.actions.secondary.href} variant="secondary" icon="play">
-              {hero.actions.secondary.label}
-            </PillButton>
+          {/* One heading in three voices: small spaced caps, the big display word, a script flourish. */}
+          <div className={s.center}>
+            <h1 className={s.heading}>
+              <span className={s.welcome}>{hero.welcome}</span> <span className={s.title}>{hero.title}</span>{' '}
+              <span className={s.subtitle}>{hero.subtitle}</span>
+            </h1>
+            <div className={s.actions}>
+              <PillButton href={hero.actions.primary.href}>{hero.actions.primary.label}</PillButton>
+              <PillButton href={hero.actions.secondary.href} variant="secondary" icon="play">
+                {hero.actions.secondary.label}
+              </PillButton>
+            </div>
+          </div>
+
+          <div className={s.cue}>
+            <span className={s.chevrons} aria-hidden>
+              <svg
+                viewBox="0 0 12 8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2 2l4 4 4-4" />
+              </svg>
+              <svg
+                viewBox="0 0 12 8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2 2l4 4 4-4" />
+              </svg>
+            </span>
+            <span className={s.cueLabel}>{hero.scrollCue}</span>
           </div>
         </div>
+      </section>
 
-        <div className={s.cue}>
-          <span className={s.chevrons} aria-hidden>
-            <svg
-              viewBox="0 0 12 8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M2 2l4 4 4-4" />
-            </svg>
-            <svg
-              viewBox="0 0 12 8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M2 2l4 4 4-4" />
-            </svg>
+      {/* Sound on: the bars move like a level meter. Off: they lie flat as a row of dashes. */}
+      {media?.type === 'video' && (
+        <button
+          ref={soundBtn}
+          type="button"
+          className={s.sound}
+          data-muted={muted}
+          onClick={toggleSound}
+          aria-pressed={!muted}
+          aria-label={hero.sound}
+          title={muted ? hero.unmute : hero.mute}
+        >
+          <span className={s.bars} aria-hidden>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <i key={i} />
+            ))}
           </span>
-          <span className={s.cueLabel}>{hero.scrollCue}</span>
-        </div>
-
-        {media?.type === 'video' && (
-          <button
-            type="button"
-            className={s.sound}
-            onClick={toggleSound}
-            aria-pressed={!muted}
-            aria-label={muted ? 'Unmute video' : 'Mute video'}
-          >
-            <SpeakerIcon muted={muted} />
-            <span>{muted ? hero.unmute : hero.mute}</span>
-          </button>
-        )}
-      </div>
-    </section>
+        </button>
+      )}
+    </>
   )
 }
