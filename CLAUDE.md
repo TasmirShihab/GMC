@@ -71,7 +71,7 @@ section, and `src/app/page.tsx` renders a section only when its flag is `true`. 
 assets stay in the repo.
 
 - `weave`: "The weave opens onto the city" (the GMC mark with video quadrants and the river, between
-  Welcome and About). Hidden since 24 Nov 2026, to come back later: set `weave: true` to restore it.
+  Welcome and About). Currently on (`weave: true`); set it to `false` to hide it again.
 
 ## Verified facts (gmc.bt, checked 23 Nov 2026)
 

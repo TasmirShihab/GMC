@@ -7,8 +7,8 @@
 export const features = {
   /**
    * "The weave opens onto the city": the GMC mark with video in its four quadrants and the river,
-   * between the Welcome and About sections. Hidden 24 Nov 2026 at the client's request, to come back later.
+   * between the Welcome and About sections. Hidden 24 Nov 2026, switched back on the same day.
    * Code: src/components/weave/ (Weave.tsx, Weave.module.css, mark.ts) · copy: `weave` in src/content/home.ts.
    */
-  weave: false,
+  weave: true,
 } as const

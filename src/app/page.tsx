@@ -28,7 +28,7 @@ export default function Home() {
       <main>
         <Hero />
         <Welcome />
-        {/* hidden for now: switch it back on in src/lib/features.ts */}
+        {/* can be switched off in src/lib/features.ts */}
         {features.weave && <Weave />}
         <About outline={outline} />
         <Vision />
