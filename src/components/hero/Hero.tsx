@@ -90,7 +90,11 @@ export function Hero() {
             scrollTrigger: {
               trigger: root.current,
               start: 'top top',
-              end: '+=100%',
+              // Exactly the hero's own height (100svh), not '+=100%' (window.innerHeight): on iPhone
+              // Safari the two differ once the address bar collapses, and the card's flight then
+              // outlasted the hero, still drifting over the Welcome after it had locked in place.
+              end: () => `+=${root.current?.offsetHeight ?? window.innerHeight}`,
+              invalidateOnRefresh: true,
               scrub: true,
               pin: true,
               pinSpacing: false,
