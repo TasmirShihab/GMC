@@ -38,6 +38,10 @@ interface ExperienceState {
   intro: IntroPhase
   /** The full-screen 3D map layer is open: the home page's own 3D and scroll stay paused under it. */
   mapOpen: boolean
+  /** How many 3D pieces (<Stage> / <SectionView>) are mounted; the canvas only draws frames while > 0. */
+  scenes: number
+  addScene: () => void
+  removeScene: () => void
   setIntro: (intro: IntroPhase) => void
   setMapOpen: (open: boolean) => void
   setProfile: (p: { tier: QualityTier; reducedMotion: boolean; lite: boolean; debug: boolean }) => void
@@ -53,6 +57,9 @@ export const useExperience = create<ExperienceState>((set) => ({
   debug: false,
   intro: 'loading',
   mapOpen: false,
+  scenes: 0,
+  addScene: () => set((s) => ({ scenes: s.scenes + 1 })),
+  removeScene: () => set((s) => ({ scenes: Math.max(0, s.scenes - 1) })),
   setIntro: (intro) => set({ intro }),
   setMapOpen: (mapOpen) => set({ mapOpen }),
   setProfile: (p) => set(p),

@@ -4,6 +4,7 @@ import { PerspectiveCamera, View } from '@react-three/drei'
 import type { CSSProperties, ReactNode } from 'react'
 
 import { RENDER_PRIORITY } from './renderOrder'
+import { useSceneMounted } from './Stage'
 
 interface SectionViewProps {
   children: ReactNode
@@ -22,6 +23,7 @@ interface SectionViewProps {
  * Each view is a separate scene, so global post-processing does not apply to it.
  */
 export function SectionView({ children, className, style, distance = 6, position, fov = 35 }: SectionViewProps) {
+  useSceneMounted()
   return (
     <View className={className} style={style} index={RENDER_PRIORITY.views}>
       <PerspectiveCamera makeDefault position={position ?? [0, 0, distance]} fov={fov} />

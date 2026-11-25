@@ -21,6 +21,9 @@ export default function WebGLCanvas({ eventSource }: { eventSource: RefObject<HT
   const debug = useExperience((s) => s.debug)
   // Paused (no frames drawn) while the full-screen 3D map layer covers the page.
   const mapOpen = useExperience((s) => s.mapOpen)
+  // Nothing 3D mounted on this page (the home page today): draw only on demand (resize and the like)
+  // instead of a blank full-screen frame every 1/60 s, which phones pay for while scrolling.
+  const scenes = useExperience((s) => s.scenes)
 
   // Tier 0 or still profiling: render nothing; the DOM story is complete on its own.
   if (tier === null || tier === 0) return null
@@ -29,7 +32,7 @@ export default function WebGLCanvas({ eventSource }: { eventSource: RefObject<HT
   return (
     <Canvas
       className="webgl-canvas"
-      frameloop={mapOpen ? 'never' : 'always'}
+      frameloop={mapOpen ? 'never' : scenes > 0 ? 'always' : 'demand'}
       eventSource={eventSource as RefObject<HTMLElement>}
       eventPrefix="client"
       dpr={q.dpr}

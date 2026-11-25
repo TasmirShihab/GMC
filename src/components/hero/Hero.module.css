@@ -12,26 +12,34 @@
   font-family: var(--font-sans);
 }
 
-/* Everything visible in the hero; this is what tilts away on scroll. --frame grows a cream postcard border. */
+/* Everything visible in the hero; this is what tilts away on scroll. Only transform and opacity change
+   while it does (the border below fades in, it does not grow), so the phone moves one ready-made layer
+   instead of repainting the full-screen footage every frame. */
 .card {
-  --frame: 0px;
   position: absolute;
   inset: 0;
   overflow: hidden;
   transform-origin: 50% 60%;
-  box-shadow:
-    inset 0 0 0 var(--frame) var(--c-paper),
-    0 30px 80px rgb(0 0 0 / 0.28);
+  will-change: transform;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.28);
 }
 
-.card::after {
-  /* the postcard border sits above the footage */
-  content: '';
+/* The cream postcard border, above the footage: drawn once at full width, faded in as the card lifts. */
+.frame {
   position: absolute;
   inset: 0;
   z-index: 5;
+  opacity: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 0 var(--frame) var(--c-paper);
+  box-shadow: inset 0 0 0 10px var(--c-paper);
+  will-change: opacity;
+}
+
+/* Phones: a smaller, cheaper shadow under the card. */
+@media (max-width: 700px) {
+  .card {
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.28);
+  }
 }
 
 .media,
@@ -304,4 +312,14 @@
 :global(html.js) .sound,
 :global(html.js) .cue {
   visibility: hidden;
+}
+
+/* Touch screens: no live blur behind the sound button (it would be recomputed over the moving footage
+   on every frame of the hero's exit); a slightly darker fill keeps it readable instead. */
+@media (pointer: coarse) {
+  .sound {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgb(18 14 10 / 0.55);
+  }
 }

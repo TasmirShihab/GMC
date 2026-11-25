@@ -74,6 +74,7 @@ export function Hero() {
       const q = gsap.utils.selector(root)
       const cue = [...q(`.${s.cue}, .${s.actions}`), soundBtn.current].filter(Boolean)
       const card = q(`.${s.card}`)
+      const frame = q(`.${s.frame}`)
 
       // Scrolling out: the hero holds still, then shrinks, tilts and flies up like a postcard,
       // uncovering the welcome page underneath (it scrolls up beneath the pinned hero).
@@ -106,12 +107,12 @@ export function Hero() {
             },
           })
           .to(card, {
-            '--frame': '10px',
             scale: 0.92,
             rotate: -2,
             duration: phone ? 0.15 : 0.3,
             ease: 'power1.in',
           })
+          .to(frame, { opacity: 1, duration: phone ? 0.15 : 0.3, ease: 'power1.in' }, 0)
           .to(card, {
             scale: 0.62,
             rotate: -7,
@@ -210,6 +211,8 @@ export function Hero() {
             </span>
             <span className={s.cueLabel}>{hero.scrollCue}</span>
           </div>
+          {/* The cream postcard border, faded in as the card lifts away. */}
+          <div className={s.frame} aria-hidden />
         </div>
       </section>
 
