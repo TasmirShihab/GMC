@@ -12,6 +12,9 @@ import s from './Welcome.module.css'
 
 /** How far each card ends up above its spot (in % of its height); it starts 1.6× that far below. Different speeds = depth. */
 const DRIFT = [-60, -35, -80, -25, -45, -70]
+/** On the way out, how far each card travels up beyond the scroll itself (× screen height): faster than the text. */
+const EXIT = [0.55, 0.7, 0.5, 0.85, 0.75, 0.95]
+const leavingClass = s.leaving ?? 'leaving'
 
 /**
  * Welcome page under the hero, rebuilt from the second reference recording:
@@ -121,6 +124,26 @@ export function Welcome() {
       cards.forEach((card, i) => {
         const drift = DRIFT[i % DRIFT.length]!
         tl.fromTo(card, { yPercent: -drift * 1.6 }, { yPercent: drift, duration: 1 }, 0)
+      })
+
+      // ── Leaving: once the pin lets go, the copy scrolls away at normal speed while the photos
+      // overtake it, rushing up and out over the title (each at its own pace, for depth).
+      const pin = tl.scrollTrigger!
+      const exit = gsap.timeline({
+        defaults: { ease: 'none' },
+        scrollTrigger: {
+          trigger: el,
+          start: () => pin.end,
+          end: () => pin.end + el.offsetHeight,
+          scrub: 0.4,
+          invalidateOnRefresh: true,
+          // all the photos pass in front of the title on the way out
+          onUpdate: (self) => el.classList.toggle(leavingClass, self.progress > 0),
+          onLeaveBack: () => el.classList.remove(leavingClass),
+        },
+      })
+      cards.forEach((card, i) => {
+        exit.fromTo(card, { y: 0 }, { y: () => -window.innerHeight * EXIT[i % EXIT.length]!, duration: 1 }, 0)
       })
 
       return () => {

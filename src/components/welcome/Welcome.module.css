@@ -102,6 +102,11 @@
   object-fit: cover;
 }
 
+/* Leaving (Welcome.tsx): every photo passes in front of the title on its way out. */
+.leaving .card {
+  z-index: 3;
+}
+
 .c1 { left: 2%; top: 8.5%; width: 15%; aspect-ratio: 16 / 9; }
 .c2 { left: 17.8%; top: 22.8%; width: 17%; aspect-ratio: 3 / 2; z-index: 3; }
 .c3 { left: 78%; top: 8.5%; width: 15%; aspect-ratio: 9 / 8; }

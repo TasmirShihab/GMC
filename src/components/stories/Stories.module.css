@@ -343,3 +343,29 @@
     width: 90%;
   }
 }
+
+/* Phones: the sector name must fit inside the card (Belleza runs wide in caps). */
+@media (max-width: 700px) {
+  .storyTitle {
+    font-size: clamp(28px, 8.6vw, 40px);
+    line-height: 0.98;
+  }
+}
+
+/* Touch screens: 44px-tall hit areas on the progress dashes (the bars themselves stay 3px) and
+   bigger pathway stops. */
+@media (pointer: coarse) {
+  .dashes {
+    margin-top: -15px;
+  }
+  .dash {
+    height: 44px;
+  }
+  .dash::before,
+  .dash i {
+    top: 20.5px;
+  }
+  .stop {
+    width: 40px;
+  }
+}

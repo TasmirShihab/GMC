@@ -319,8 +319,13 @@
 }
 
 @media (max-width: 560px) {
+  /* The card is tall here, so a fade sized as a share of the footer would cover most of the picture:
+     the fade is fixed instead, and the landscape shows for a short band above the card. */
   .footer {
-    padding-top: clamp(200px, 32vh, 280px);
+    padding-top: 168px;
+  }
+  .fade {
+    height: 200px;
   }
   .back img {
     transform: none;
@@ -329,5 +334,23 @@
   .signature {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* Touch screens: each link's tap area fills its whole row instead of just the line of text. */
+@media (pointer: coarse) {
+  .group ul {
+    gap: 0;
+  }
+  .group a {
+    display: block;
+    padding: 8px 0;
+  }
+  .legal {
+    gap: 0;
+  }
+  .legal a {
+    display: inline-block;
+    padding: 6px 0;
   }
 }

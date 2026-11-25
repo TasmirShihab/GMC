@@ -218,6 +218,19 @@
     border-color 0.3s;
 }
 
+/* Touch screens: the button stays small but its tap area grows to 44px. */
+@media (pointer: coarse) {
+  .pause {
+    position: relative;
+  }
+  .pause::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+  }
+}
+
 .pause svg {
   width: 44%;
 }

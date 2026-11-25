@@ -343,6 +343,15 @@
     top: 16%;
     height: 66%;
   }
+  /* the card is taller than wide here: the photo takes the spare height, so no empty band opens
+     between the label and the number */
+  .photo {
+    flex: 1 1 auto;
+  }
+  .info {
+    flex: none;
+    gap: 28px;
+  }
   .stage {
     grid-template-columns: 1fr minmax(0, 76vw) 1fr;
   }

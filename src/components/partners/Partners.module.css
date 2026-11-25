@@ -121,3 +121,10 @@
     display: none;
   }
 }
+
+/* Phones: the strip runs straight into the volunteers' photo; a full desktop gap reads as a break. */
+@media (max-width: 900px) {
+  .partners {
+    padding-bottom: 40px;
+  }
+}

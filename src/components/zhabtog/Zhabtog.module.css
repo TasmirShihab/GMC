@@ -155,6 +155,11 @@
 }
 
 @media (max-width: 900px) {
+  /* the partners strip above already closes with its own space */
+  .zhabtog {
+    padding-top: 32px;
+    padding-bottom: 72px;
+  }
   .inner {
     grid-template-columns: minmax(0, 1fr);
     row-gap: clamp(56px, 8vh, 80px);

@@ -63,6 +63,20 @@ export function About({ outline }: { outline: Outline }) {
       const tagName = el.querySelector(`.${s.tagName}`) as HTMLElement
       const count = el.querySelector(`.${s.count}`) as HTMLElement
       let shown = -1
+
+      // On narrow screens a tag centred on a stop near the edge would run off screen: slide it back
+      // inside a 12px margin (the pointer stays over the stop, see --nudge in the CSS).
+      const nudgeTag = () => {
+        tag.style.marginLeft = '0px'
+        tag.style.setProperty('--nudge', '0px')
+        const r = tag.getBoundingClientRect()
+        const edge = 12
+        const shift =
+          r.left < edge ? edge - r.left : r.right > window.innerWidth - edge ? window.innerWidth - edge - r.right : 0
+        if (!shift) return
+        tag.style.marginLeft = `${shift}px`
+        tag.style.setProperty('--nudge', `${shift}px`)
+      }
       const area = new Intl.NumberFormat('en')
 
       const showStop = (i: number) => {
@@ -78,6 +92,7 @@ export function About({ outline }: { outline: Outline }) {
         tagName.textContent = about.stops[i] ?? ''
         tag.style.left = pct(x, vbW)
         tag.style.top = pct(y, vbH)
+        nudgeTag()
         gsap.fromTo(
           tag,
           { autoAlpha: 0, y: 8 },
