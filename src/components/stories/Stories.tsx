@@ -61,6 +61,7 @@ export function Stories({ outline }: { outline: Outline }) {
   const veil = useRef<HTMLCanvasElement>(null)
   const strip = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
+  const hintRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
 
   // Mutable state used by the imperative parts.
@@ -226,8 +227,9 @@ export function Stories({ outline }: { outline: Outline }) {
       window.addEventListener('resize', draw)
 
       // Wait pinned, still, under the Investor block while it dissolves away (CSS pulls this section up).
+      let waitPin: ScrollTrigger | null = null
       if (!reduced) {
-        ScrollTrigger.create({
+        waitPin = ScrollTrigger.create({
           trigger: el,
           start: 'top top',
           end: () => `+=${window.innerHeight}`,
@@ -249,18 +251,6 @@ export function Stories({ outline }: { outline: Outline }) {
         },
       })
 
-      // Autoplay only while the card is on screen. Header: brown over the cream heading, light over the card.
-      ScrollTrigger.create({
-        trigger: c,
-        pinnedContainer: reduced ? undefined : el,
-        start: 'top bottom',
-        end: 'bottom top',
-        onToggle: (self) => {
-          st.current.inView = self.isActive
-          if (self.isActive && !st.current.hover) timer.current?.play()
-          else timer.current?.pause()
-        },
-      })
       // The photo card: light header while it is under the header (the cream heading above it keeps dark).
       const offZone = headerZone(c, 'light')
       ScrollTrigger.create({
@@ -270,24 +260,87 @@ export function Stories({ outline }: { outline: Outline }) {
         onLeaveBack: () => setOnCream(true),
       })
 
-      const onEnterCard = () => {
+      // Autoplay runs like a social-media story: on its own while the card is on screen, paused only
+      // while it is pressed and held.
+      const onHold = () => {
         st.current.hover = true
         timer.current?.pause()
       }
-      const onLeaveCard = () => {
+      const onRelease = () => {
         st.current.hover = false
         if (st.current.inView) timer.current?.play()
       }
-      c.addEventListener('pointerenter', onEnterCard)
-      c.addEventListener('pointerleave', onLeaveCard)
+      c.addEventListener('pointerdown', onHold)
+      c.addEventListener('pointerup', onRelease)
+      c.addEventListener('pointercancel', onRelease)
+      c.addEventListener('pointerleave', onRelease)
+
+      // Phones: the swipe hint shows once the card lands. After the first swipe, or once the card has been
+      // scrolled past, it stays away until the page loads again. (Hidden by CSS on wide screens.)
+      const hint = hintRef.current
+      let hintDone = false
+      const setHint = (on: boolean) => {
+        if (!hint) return
+        if (!on && hint.dataset.show === 'true') hintDone = true
+        hint.dataset.show = String(on && !hintDone)
+      }
+
+      // "Landed": the Investor block above has finished dissolving and the card is well on screen. Read
+      // from the card's own box on every scroll (start/end positions of triggers inside this pinned section
+      // come out wrong, so they are not used here). Drives autoplay and the swipe hint.
+      let landed = false
+      const checkLanded = () => {
+        const r = c.getBoundingClientRect()
+        const vh = window.innerHeight
+        const free = !waitPin || window.scrollY >= waitPin.end - 1
+        const now = free && r.top < vh * 0.75 && r.bottom > vh * 0.3
+        if (now === landed) return
+        landed = now
+        st.current.inView = now
+        if (now && !st.current.hover) timer.current?.play()
+        else timer.current?.pause()
+        setHint(now)
+      }
+      const watch = ScrollTrigger.create({ start: 0, end: 'max', onUpdate: checkLanded, onRefresh: checkLanded })
+
+      // Swipe sideways on the card: left for the next story, right for the previous one.
+      let sx = 0
+      let sy = 0
+      let tracking = false
+      const onTouchStart = (e: TouchEvent) => {
+        const t = e.touches[0]
+        tracking = e.touches.length === 1 && !!t
+        if (t) {
+          sx = t.clientX
+          sy = t.clientY
+        }
+      }
+      const onTouchEnd = (e: TouchEvent) => {
+        const t = e.changedTouches[0]
+        if (!tracking || !t) return
+        tracking = false
+        const dx = t.clientX - sx
+        const dy = t.clientY - sy
+        if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.2) return
+        setHint(false)
+        hintDone = true
+        goRef.current(dx < 0 ? 1 : -1)
+      }
+      c.addEventListener('touchstart', onTouchStart, { passive: true })
+      c.addEventListener('touchend', onTouchEnd, { passive: true })
 
       return () => {
         offZone()
         cancelled = true
         timer.current?.kill()
         window.removeEventListener('resize', draw)
-        c.removeEventListener('pointerenter', onEnterCard)
-        c.removeEventListener('pointerleave', onLeaveCard)
+        watch.kill()
+        c.removeEventListener('pointerdown', onHold)
+        c.removeEventListener('pointerup', onRelease)
+        c.removeEventListener('pointercancel', onRelease)
+        c.removeEventListener('pointerleave', onRelease)
+        c.removeEventListener('touchstart', onTouchStart)
+        c.removeEventListener('touchend', onTouchEnd)
       }
     },
     { scope: root },
@@ -345,18 +398,48 @@ export function Stories({ outline }: { outline: Outline }) {
           <PillButton href={story.href}>{stories.read}</PillButton>
         </div>
 
-        <button type="button" className={`${s.nav} ${s.prev}`} onClick={() => go(-1)}>
+        <button
+          type="button"
+          className={`${s.nav} ${s.prev}`}
+          onClick={() => go(-1)}
+          aria-label={`Previous ${stories.navNoun}`}
+        >
           <span className={s.diamond}>
             <Arrow dir="prev" />
           </span>
-          {stories.prev}
+          <span>
+            {stories.prev}
+            <span className={s.navNoun}> {stories.navNoun}</span>
+          </span>
         </button>
-        <button type="button" className={`${s.nav} ${s.next}`} onClick={() => go(1)}>
-          {stories.next}
+        <button type="button" className={`${s.nav} ${s.next}`} onClick={() => go(1)} aria-label={`Next ${stories.navNoun}`}>
+          <span>
+            {stories.next}
+            <span className={s.navNoun}> {stories.navNoun}</span>
+          </span>
           <span className={s.diamond}>
             <Arrow dir="next" />
           </span>
         </button>
+
+        {/* Phones: swipe hint in place of Prev / Next. */}
+        <div ref={hintRef} className={s.hint} data-show="false" aria-hidden>
+          <svg className={s.hintChevron} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 3 5 8l5 5" />
+          </svg>
+          <span className={s.hintTrack}>
+            <svg className={s.hintHand} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 14a8 8 0 0 1-8 8" />
+              <path d="M18 11v-1a2 2 0 0 0-4 0" />
+              <path d="M14 10V9a2 2 0 0 0-4 0v1" />
+              <path d="M10 9.5V4a2 2 0 0 0-4 0v10" />
+              <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+            </svg>
+          </span>
+          <svg className={s.hintChevron} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 3 5 5-5 5" />
+          </svg>
+        </div>
 
         {/* The pathway: the GMC outline's ridge with a stop per story (three copies, so it never ends). */}
         <div className={s.path}>

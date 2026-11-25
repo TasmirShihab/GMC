@@ -333,14 +333,93 @@
     0 8px 22px rgb(0 0 0 / 0.45);
 }
 
+/* Swipe hint (phones only): a hand sweeping sideways between two chevrons, where Prev / Next sit on
+   wide screens. Shown when the card lands; gone after the first swipe or once the card is scrolled past,
+   until the page loads again (Stories.tsx). */
+.hint {
+  display: none;
+}
+
 @media (max-width: 700px) {
+  /* Phones: no Prev / Next; the card is swiped instead. pan-y keeps vertical page scroll native while
+     sideways moves reach the swipe handler. */
   .nav {
-    top: auto;
-    bottom: clamp(120px, 20%, 170px);
-    translate: none;
+    display: none;
+  }
+  .card {
+    touch-action: pan-y;
   }
   .text {
     width: 90%;
+  }
+  .hint {
+    position: absolute;
+    left: 50%;
+    bottom: clamp(120px, 20%, 170px);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    translate: -50% 0;
+    border-radius: 999px;
+    background: rgb(20 14 8 / 0.32);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    color: var(--c-hero-text);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 0.5s var(--ease-settle),
+      visibility 0s linear 0.5s;
+  }
+  .hint[data-show='true'] {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.6s var(--ease-settle) 0.4s;
+  }
+}
+
+.hintChevron {
+  width: 14px;
+  height: 14px;
+  opacity: 0.7;
+}
+
+.hintHand {
+  display: block;
+  width: 30px;
+  height: 30px;
+}
+
+.hintTrack {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hint[data-show='true'] .hintHand {
+    animation: swipe 1.8s var(--ease-settle) infinite;
+  }
+}
+
+@keyframes swipe {
+  0%,
+  12% {
+    translate: 12px 0;
+    rotate: 0deg;
+  }
+  55%,
+  70% {
+    translate: -12px 0;
+    rotate: -10deg;
+  }
+  100% {
+    translate: 12px 0;
+    rotate: 0deg;
   }
 }
 
@@ -367,5 +446,16 @@
   }
   .stop {
     width: 40px;
+  }
+}
+
+/* "Prev sector" / "Next sector" on wide screens; just "Prev" / "Next" on phones. */
+.navNoun {
+  white-space: pre;
+}
+
+@media (max-width: 700px) {
+  .navNoun {
+    display: none;
   }
 }

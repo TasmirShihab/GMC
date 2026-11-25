@@ -31,6 +31,7 @@ function Arrow({ dir }: { dir: 'prev' | 'next' }) {
  *       from the bottom, and with it the card on the right (inset photo, big number, label).
  *   2 · the eight sectors (fifth reference recording), on the terra ground: heading, card row and button pin
  *       as one block and the row pages sideways, four at a time; then the block dissolves into the Stories page.
+ *       On phones the row is a swipe slider instead, and the pin only holds for the dissolve.
  */
 export function Invest() {
   const root = useRef<HTMLElement>(null)
@@ -95,14 +96,38 @@ export function Invest() {
       const pages = () => Math.max(1, Math.ceil(cards.length / perView()))
       let page = -1
 
+      // Phones (one card a page): the row is a sideways slider instead. It is swiped (native scroll with
+      // snap points, see the CSS) or moved with Prev / Next, and scrolling down goes straight on.
+      const win = q(`.${s.window}`)[0] as HTMLElement
+      const swipes = () => perView() === 1
+      const leftOf = (k: number) => (cards[k]?.offsetLeft ?? 0) - (cards[0]?.offsetLeft ?? 0)
+      const showPage = (k: number) => {
+        page = k
+        prev.disabled = k === 0
+        next.disabled = k === pages() - 1
+      }
+      const onSwipe = () => {
+        if (!swipes()) return
+        showPage(Math.max(0, Math.min(pages() - 1, Math.round(win.scrollLeft / (leftOf(1) || 1)))))
+      }
+      win.addEventListener('scroll', onSwipe, { passive: true })
+
       const goTo = (k: number, instant = false) => {
         const last = pages() - 1
         k = Math.max(0, Math.min(last, k))
-        prev.disabled = k === 0
-        next.disabled = k === last
-        if (k === page && !instant) return
-        page = k
-        const x = -(cards[k * perView()]?.offsetLeft ?? 0)
+        if (swipes()) {
+          showPage(k)
+          gsap.set(track, { x: 0 })
+          win.scrollTo({ left: leftOf(k), behavior: instant || reduced ? 'auto' : 'smooth' })
+          return
+        }
+        if (k === page && !instant) {
+          showPage(k)
+          return
+        }
+        showPage(k)
+        win.scrollLeft = 0
+        const x = -leftOf(k * perView())
         gsap.to(track, { x, duration: instant || reduced ? 0 : 0.9, ease: 'power3.inOut', overwrite: true })
       }
 
@@ -111,7 +136,10 @@ export function Invest() {
       // After the last page it stays pinned one more screen and dissolves away (like About → Vision):
       // the contents fade, then the terra ground breaks into islands over the Stories page waiting below.
       const block = q(`.${s.sectors}`)[0] as HTMLElement
-      const pagesLen = () => (pages() - 1) * window.innerHeight
+      // On phones the row is swiped, so instead of paging, the screen locks in place for a stretch of
+      // scroll (time to swipe through the sectors), then the next scroll carries on into the dissolve.
+      const LOCK = 0.8
+      const pagesLen = () => window.innerHeight * (swipes() ? (reduced ? 0 : LOCK) : pages() - 1)
       const total = () => pagesLen() + (reduced ? 0 : window.innerHeight)
 
       const gc = ground.current
@@ -180,16 +208,23 @@ export function Invest() {
         onUpdate: (self) => {
           const px = self.progress * total()
           const len = pagesLen()
-          goTo(Math.round(Math.min(1, len ? px / len : 1) * (pages() - 1)))
+          if (!swipes()) goTo(Math.round(Math.min(1, len ? px / len : 1) * (pages() - 1)))
           if (!reduced) dissolveTo(Math.max(0, (px - len) / window.innerHeight))
         },
-        onRefresh: (self) => goTo(Math.round(Math.min(1, (self.progress * total()) / (pagesLen() || 1)) * (pages() - 1)), true),
+        onRefresh: (self) => {
+          if (swipes()) {
+            gsap.killTweensOf(track)
+            gsap.set(track, { x: 0 })
+            onSwipe()
+          } else goTo(Math.round(Math.min(1, (self.progress * total()) / (pagesLen() || 1)) * (pages() - 1)), true)
+        },
       })
 
-      // Prev / Next scroll to that page's spot in the pin (in reduced motion they just switch the page).
+      // Prev / Next scroll to that page's spot in the pin (on phones, and in reduced motion, they just
+      // move the row).
       const step = (d: number) => {
         const k = Math.max(0, Math.min(pages() - 1, page + d))
-        if (reduced || pages() < 2) return goTo(k)
+        if (swipes() || reduced || pages() < 2) return goTo(k)
         const y = pin.start + (k / (pages() - 1)) * pagesLen()
         if (lenisRef.current) lenisRef.current.scrollTo(y, { duration: 1 })
         else window.scrollTo({ top: y, behavior: 'smooth' })
@@ -209,6 +244,7 @@ export function Invest() {
         window.removeEventListener('resize', sizeGround)
         prev.removeEventListener('click', onPrev)
         next.removeEventListener('click', onNext)
+        win.removeEventListener('scroll', onSwipe)
       }
     },
     { scope: root },

@@ -217,8 +217,10 @@ export const stories = {
   title: ['How the city', 'takes shape'],
   body: 'Placeholder: eight priority sectors, eight parts of one city. Step along the path to see how each one could look.',
   read: "Let's Explore",
-  prev: 'Prev. story',
-  next: 'Next story',
+  /* "Prev sector" / "Next sector" on wide screens; the noun is dropped on phones. */
+  prev: 'Prev',
+  next: 'Next',
+  navNoun: 'sector',
   items: [
     { name: 'Spiritual', image: '/images/gmc/stupa.jpg', href: '#story-spiritual' },
     { name: 'Health and Wellness', image: '/images/gmc/meditation-courtyard.jpg', href: '#story-wellness' },

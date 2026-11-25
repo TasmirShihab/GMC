@@ -15,6 +15,8 @@ const DRIFT = [-60, -35, -80, -25, -45, -70]
 /** On the way out, how far each card travels up beyond the scroll itself (× screen height): faster than the text. */
 const EXIT = [0.55, 0.7, 0.5, 0.85, 0.75, 0.95]
 const leavingClass = s.leaving ?? 'leaving'
+/** Space left between the title and the next section on narrow screens (wide screens have about the same). */
+const GAP_BELOW = 64
 
 /**
  * Welcome page under the hero, rebuilt from the second reference recording:
@@ -80,6 +82,32 @@ export function Welcome() {
       const cards = q(`.${s.card}`)
       const ink = q(`.${s.lead}, .${s.title}`)
 
+      // On narrow screens the title only fills the top half of this full-screen section, which left a
+      // half-screen of empty terra before the next section. The next section is pulled up under it so
+      // the gap below the title matches wide screens. This section sits above it so the photos still fly
+      // out over everything, and its own ground stops where the next section starts (--pull). Behind it,
+      // the pin's spacer is painted terra down to the same line, so the two read as one orange ground at
+      // every scroll position: nothing moves with the scroll, so nothing can lag a frame and flash.
+      const after = el.nextElementSibling instanceof HTMLElement ? el.nextElementSibling : null
+      const title = q(`.${s.title}`)[0] as HTMLElement | undefined
+      const ground = (p: number) => `linear-gradient(var(--c-terra), var(--c-terra)) top / 100% calc(100% - ${p}px) no-repeat`
+      const pullUp = () => {
+        if (!after || !title) return
+        const spare = el.offsetHeight - (title.getBoundingClientRect().bottom - el.getBoundingClientRect().top) - GAP_BELOW
+        const p = spare > 40 ? Math.round(spare) : 0
+        el.dataset.pulled = String(p > 0)
+        el.style.setProperty('--pull', `${p}px`)
+        after.style.marginTop = p ? `${-p}px` : ''
+        const spacer = el.parentElement?.classList.contains('pin-spacer') ? el.parentElement : null
+        if (spacer) spacer.style.background = p ? ground(p) : ''
+      }
+      pullUp()
+      ScrollTrigger.addEventListener('refreshInit', pullUp)
+      const offPull = () => {
+        ScrollTrigger.removeEventListener('refreshInit', pullUp)
+        if (after) after.style.marginTop = ''
+      }
+
       if (reduced) {
         // Same content, no motion: straight to the coloured state once the page arrives.
         ScrollTrigger.create({
@@ -94,6 +122,7 @@ export function Welcome() {
         })
         return () => {
           cancelled = true
+          offPull()
           window.removeEventListener('resize', resize)
         }
       }
@@ -129,6 +158,7 @@ export function Welcome() {
       // ── Leaving: once the pin lets go, the copy scrolls away at normal speed while the photos
       // overtake it, rushing up and out over the title (each at its own pace, for depth).
       const pin = tl.scrollTrigger!
+      pullUp() // now that the spacer exists, paint it
       const exit = gsap.timeline({
         defaults: { ease: 'none' },
         scrollTrigger: {
@@ -148,6 +178,7 @@ export function Welcome() {
 
       return () => {
         cancelled = true
+        offPull()
         window.removeEventListener('resize', resize)
       }
     },

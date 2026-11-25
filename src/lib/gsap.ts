@@ -19,8 +19,9 @@ if (typeof window !== 'undefined') {
   gsap.defaults({ ease: 'breath', duration: DURATION.base })
   // Lenis drives scrolling; ScrollTrigger only needs to listen.
   ScrollTrigger.config({ ignoreMobileResize: true })
-  // Dev only: lets the console pause/scrub every animation (gsap.globalTimeline) when checking motion.
-  if (process.env.NODE_ENV !== 'production') (window as Window & { __gsap?: typeof gsap }).__gsap = gsap
+  // Dev only: lets the console pause/scrub every animation (gsap.globalTimeline) and list the scroll
+  // triggers (__st.getAll()) when checking motion.
+  if (process.env.NODE_ENV !== 'production') Object.assign(window, { __gsap: gsap, __st: ScrollTrigger })
 }
 
 export { gsap, ScrollTrigger, SplitText, useGSAP }

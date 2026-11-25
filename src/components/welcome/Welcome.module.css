@@ -103,6 +103,16 @@
 }
 
 /* Leaving (Welcome.tsx): every photo passes in front of the title on its way out. */
+/* Narrow screens: the next section is pulled up under the empty lower part (Welcome.tsx, pullUp). The
+   terra stops where that section starts (its pin spacer is painted terra down to the same line, so the
+   two always meet as one ground); this section sits above it so the photos still fly out over everything.
+   It holds nothing clickable. */
+.welcome[data-pulled='true'] {
+  z-index: 2;
+  background: linear-gradient(var(--c-terra), var(--c-terra)) top / 100% calc(100% - var(--pull, 0px)) no-repeat;
+  pointer-events: none;
+}
+
 .leaving .card {
   z-index: 3;
 }
