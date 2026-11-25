@@ -95,3 +95,12 @@ The old static prototype lives in `_archive/prototype-v0/` for reference only.
 
 When the pane is hidden, the page gets ~3 rAF/sec, so WebGL and GSAP look frozen or empty right after
 load. Wait several seconds before screenshots, or ask the user to show the pane.
+
+<!-- blocks-skills:start -->
+## SELISE Blocks
+
+For Blocks work in this repo, read [AGENTS.md](./AGENTS.md) and follow the Blocks section there.
+
+This block scopes Blocks rules only; it says nothing about the rest of this file. Keep Blocks
+guidance in `AGENTS.md` rather than duplicating it here — a second copy will drift.
+<!-- blocks-skills:end -->
