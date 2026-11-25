@@ -2,7 +2,8 @@
 
 .hero {
   position: relative;
-  z-index: 2; /* above the welcome page that scrolls up underneath */
+  /* above the welcome page that scrolls up underneath (which itself is at 2 on phones, see Welcome.module.css) */
+  z-index: 3;
   height: 100vh;
   height: 100svh;
   min-height: 480px;
