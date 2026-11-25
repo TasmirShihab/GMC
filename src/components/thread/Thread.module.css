@@ -21,7 +21,7 @@
 /* Pulled up behind the pinned Zhabtog section: its height + the one screen its dissolve takes. */
 @media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
   .thread {
-    margin-top: calc(-1 * max(100svh, 640px) - 100vh);
+    margin-top: calc(-1 * max(100svh, 640px) - var(--screen, 100vh));
   }
 }
 

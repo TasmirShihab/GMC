@@ -47,6 +47,28 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
     return () => gsap.ticker.remove(update)
   }, [])
 
+  // Touch-only devices (phones, tablets): the page scrolls on the same thread as the animations
+  // (GSAP's normalizeScroll), so pinned sections and the content around them move on the same frame
+  // instead of the pins trailing the native scroll, and the browser's address bar stays put instead of
+  // resizing the screen mid-scroll. Sideways scrollers (the sectors row) still pan natively. Off while
+  // scrolling is locked (the loader, the map layer), which Lenis marks with html.lenis-stopped.
+  useEffect(() => {
+    if (lite || ScrollTrigger.isTouch !== 1) return
+    const normalizer = ScrollTrigger.normalizeScroll({ type: 'touch', allowNestedScroll: true })
+    const html = document.documentElement
+    const sync = () => {
+      if (html.classList.contains('lenis-stopped')) normalizer?.disable()
+      else normalizer?.enable()
+    }
+    sync()
+    const mo = new MutationObserver(sync)
+    mo.observe(html, { attributes: true, attributeFilter: ['class'] })
+    return () => {
+      mo.disconnect()
+      ScrollTrigger.normalizeScroll(false)
+    }
+  }, [lite])
+
   return (
     <ReactLenis
       root

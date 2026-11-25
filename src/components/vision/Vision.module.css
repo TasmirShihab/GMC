@@ -14,7 +14,7 @@
 /* Pulled up behind the pinned About section: its height + the one screen its dissolve takes. */
 @media (prefers-reduced-motion: no-preference) {
   .vision {
-    margin-top: calc(-100vh - max(100svh, 560px));
+    margin-top: calc(-1 * var(--screen, 100vh) - max(100svh, 560px));
   }
 }
 

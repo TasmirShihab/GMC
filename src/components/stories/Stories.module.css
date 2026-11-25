@@ -14,7 +14,7 @@
 /* Pulled up behind the pinned Investor block: its height + the one screen its dissolve takes. */
 @media (prefers-reduced-motion: no-preference) {
   .stories {
-    margin-top: calc(-100vh - 100svh);
+    margin-top: calc(-100svh - var(--screen, 100vh));
   }
 }
 
