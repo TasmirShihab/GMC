@@ -6,7 +6,7 @@ import { about } from '@/content/home'
 import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap'
 import { setOnCream } from '@/lib/headerTheme'
 import type { Outline } from '@/lib/outline'
-import { pointsAlong } from '@/lib/pathPoints'
+import { pathUpTo, pointsAlong, polyline } from '@/lib/pathPoints'
 
 import { Dissolve } from '../intro/dissolve'
 import { drawTopo } from '../intro/topo'
@@ -54,8 +54,7 @@ export function About({ outline }: { outline: Outline }) {
       window.addEventListener('resize', draw)
 
       const line = el.querySelector(`.${s.progress}`) as SVGPathElement
-      const len = line.getTotalLength()
-      line.style.strokeDasharray = String(len)
+      const route = polyline(outline.boundary)
       const items = q(`.${s.stop}`)
       const dots = q(`.${s.dot}`)
       const tag = el.querySelector(`.${s.tag}`) as HTMLElement
@@ -107,7 +106,7 @@ export function About({ outline }: { outline: Outline }) {
         const local = x - k
         const t = local < HOLD ? 0 : easeInOut((local - HOLD) / (1 - HOLD))
         const f = (k + t) / n
-        line.style.strokeDashoffset = String(len * (1 - f))
+        line.setAttribute('d', pathUpTo(route, f))
         // The area counts up with the line and lands on the full figure when the outline closes.
         count.textContent = area.format(Math.round(about.area.value * f))
         showStop(t > 0.97 ? Math.min(n - 1, k + 1) : k)
@@ -251,7 +250,8 @@ export function About({ outline }: { outline: Outline }) {
       <div className={s.map} style={{ aspectRatio: `${vbW} / ${vbH}` }}>
         <svg viewBox={outline.viewBox} fill="none" aria-hidden>
           <path className={s.base} d={outline.boundary} />
-          <path className={s.progress} d={outline.boundary} />
+          {/* drawn along the outline by the script (pathUpTo) */}
+          <path className={s.progress} d="" />
           {/* Stop 1 is the ring (where the line starts and closes); stops 2–8 are dots, in order. */}
           <circle className={`${s.ring} ${s.dot}`} cx={outline.ring[0]} cy={outline.ring[1]} r={RING} />
           {points.slice(1).map(([x, y], i) => (

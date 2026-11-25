@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react'
 import { intro } from '@/content/home'
 import { gsap, useGSAP } from '@/lib/gsap'
 import type { Outline } from '@/lib/outline'
+import { pathUpTo, polyline } from '@/lib/pathPoints'
 import { useExperience } from '@/lib/store'
 
 import { Dissolve, openAt } from './dissolve'
@@ -98,17 +99,13 @@ export function Intro({ outline }: { outline: Outline }) {
 
       const number = q(`.${s.number}`)[0] as HTMLElement
       // The boundary outline is always there; only the loading line on top of it moves, following the counter.
-      const progress = Array.from(el.querySelectorAll<SVGPathElement>(`.${s.progress}`)).map((p) => {
-        const len = p.getTotalLength()
-        p.style.strokeDasharray = String(len)
-        p.style.strokeDashoffset = String(len)
-        return { p, len }
-      })
+      const progress = el.querySelector<SVGPathElement>(`.${s.progress}`)
+      const line = polyline(outline.boundary)
 
       const counter = { v: 0 }
       const showCount = () => {
         number.textContent = String(Math.round(counter.v))
-        progress.forEach(({ p, len }) => (p.style.strokeDashoffset = String(len * (1 - counter.v / 100))))
+        progress?.setAttribute('d', pathUpTo(line, counter.v / 100))
       }
 
       if (reduced) {
@@ -249,7 +246,8 @@ export function Intro({ outline }: { outline: Outline }) {
         {/* GMC boundary (assets/svg/gmc-outline.svg): one path, one direction, starting and closing at the ring. */}
         <svg className={s.route} viewBox={outline.viewBox} fill="none" aria-hidden>
           <path className={s.base} d={outline.boundary} />
-          <path className={s.progress} d={outline.boundary} />
+          {/* drawn along the outline by the script (pathUpTo), following the counter */}
+          <path className={s.progress} d="" />
           {/* Where the loading line starts and closes. */}
           <g transform={`translate(${outline.ring[0]} ${outline.ring[1]})`}>
             <circle className={s.ringStart} r={RING} />

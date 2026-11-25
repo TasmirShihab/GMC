@@ -213,9 +213,6 @@
 .progress {
   stroke: var(--c-yellow);
   stroke-width: 9;
-  /* undrawn until the script measures it */
-  stroke-dasharray: 9999;
-  stroke-dashoffset: 9999;
 }
 
 .ring {

@@ -62,3 +62,48 @@ export function ridgeProfile(d: string, count: number): number[] {
   const hi = Math.max(...out)
   return out.map((y) => (hi > lo ? (y - lo) / (hi - lo) : 0.5))
 }
+
+/** A straight-segment outline as its points plus the running length at each point. */
+export interface Polyline {
+  pts: [number, number][]
+  cum: number[]
+  total: number
+}
+
+export function polyline(d: string): Polyline {
+  const pts = [...d.matchAll(/[ML]\s*(-?[\d.]+)[\s,]+(-?[\d.]+)/g)].map(
+    (m) => [Number(m[1]), Number(m[2])] as [number, number],
+  )
+  if (/z\s*$/i.test(d.trim()) && pts.length) pts.push(pts[0]!)
+  const cum = [0]
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1]!
+    const [x1, y1] = pts[i]!
+    cum.push(cum[i - 1]! + Math.hypot(x1 - x0, y1 - y0))
+  }
+  return { pts, cum, total: cum[cum.length - 1] ?? 0 }
+}
+
+/**
+ * The first share `f` (0..1) of a polyline, as path data: used to "draw" a line along the outline.
+ * Building the path itself (rather than animating stroke-dashoffset) renders the same in every browser;
+ * iOS Safari breaks a dashed outline into several pieces that draw at once.
+ */
+export function pathUpTo({ pts, cum, total }: Polyline, f: number): string {
+  if (pts.length < 2 || f <= 0) return ''
+  const target = Math.min(1, f) * total
+  const fmt = (n: number) => Math.round(n * 10) / 10
+  let d = `M${fmt(pts[0]![0])} ${fmt(pts[0]![1])}`
+  for (let i = 1; i < pts.length; i++) {
+    const [x1, y1] = pts[i]!
+    if (cum[i]! <= target) {
+      d += `L${fmt(x1)} ${fmt(y1)}`
+      continue
+    }
+    const [x0, y0] = pts[i - 1]!
+    const t = (target - cum[i - 1]!) / (cum[i]! - cum[i - 1]! || 1)
+    d += `L${fmt(x0 + (x1 - x0) * t)} ${fmt(y0 + (y1 - y0) * t)}`
+    break
+  }
+  return d
+}

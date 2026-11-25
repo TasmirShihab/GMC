@@ -97,12 +97,6 @@
   stroke-linejoin: round;
 }
 
-/* The loading line starts undrawn (the outline is under 9999 units long); the script then follows the counter. */
-.progress {
-  stroke-dasharray: 9999;
-  stroke-dashoffset: 9999;
-}
-
 .base {
   stroke: var(--c-route);
   stroke-width: 5.5;
