@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.git
+.vercel
+.env*
+reffernce
+*.mov
+.impeccable
+.claude/settings.local.json

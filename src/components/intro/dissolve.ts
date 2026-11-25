@@ -35,6 +35,11 @@ export class Dissolve {
 
   /** bias 'center': islands open from the middle out (loader); 'bottom': they rise from the bottom edge. */
   static async prepare(viewW: number, viewH: number, isCancelled: () => boolean, bias: 'center' | 'bottom' = 'center') {
+    // An element measured before layout settles can report 0: fall back to the window's shape.
+    if (!(viewW > 0 && viewH > 0)) {
+      viewW = window.innerWidth || 16
+      viewH = window.innerHeight || 9
+    }
     const area = 960 * 540
     const w = Math.round(Math.sqrt((area * viewW) / viewH))
     const h = Math.round(area / w)

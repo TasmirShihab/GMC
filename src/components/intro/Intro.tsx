@@ -189,7 +189,7 @@ export function Intro({ outline }: { outline: Outline }) {
             pctx.fillRect(0, 0, pc.width, pc.height)
             if (topoAlpha.v > 0.002) {
               pctx.globalAlpha = topoAlpha.v
-              pctx.drawImage(topoCanvas, 0, 0, pc.width, pc.height)
+              if (topoCanvas.width > 0 && topoCanvas.height > 0) pctx.drawImage(topoCanvas, 0, 0, pc.width, pc.height)
               pctx.globalAlpha = 1
             }
             pctx.globalCompositeOperation = 'destination-out'

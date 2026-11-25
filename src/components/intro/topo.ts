@@ -9,7 +9,8 @@ export function drawTopo(canvas: HTMLCanvasElement, width: number, height: numbe
   canvas.width = Math.round(width * dpr)
   canvas.height = Math.round(height * dpr)
   const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  // nothing to draw into yet (an element measured before layout settles): the next resize redraws it
+  if (!ctx || canvas.width < 1 || canvas.height < 1) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   ctx.clearRect(0, 0, width, height)
 

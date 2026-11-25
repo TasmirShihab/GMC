@@ -44,12 +44,13 @@ export function Welcome() {
         pctx.fillStyle = getComputedStyle(el).getPropertyValue('--paper').trim() || '#ece4ce'
         pctx.fillRect(0, 0, pc.width, pc.height)
         pctx.globalAlpha = 0.7
-        pctx.drawImage(topoCanvas, 0, 0, pc.width, pc.height)
+        // skip the topo until it has a size (drawing a 0×0 canvas throws)
+        if (topoCanvas.width > 0 && topoCanvas.height > 0) pctx.drawImage(topoCanvas, 0, 0, pc.width, pc.height)
         pctx.globalAlpha = 1
         pc.style.visibility = state.t >= 1 ? 'hidden' : 'visible'
         // Islands not built yet: fade the paper instead.
         pc.style.opacity = dissolve ? '1' : String(1 - state.t)
-        if (dissolve && state.t > 0) {
+        if (dissolve && state.t > 0 && pc.width > 0 && pc.height > 0) {
           pctx.globalCompositeOperation = 'destination-out'
           pctx.imageSmoothingEnabled = true
           pctx.drawImage(dissolve.render(state.t), 0, 0, pc.width, pc.height)
