@@ -99,6 +99,23 @@ export function Weave() {
           else v.pause()
         },
       })
+      // The heading block eases in as it rises into view (script word, title, then body), tied to the
+      // scroll with a little smoothing, so it never arrives all at once behind the Welcome's exit.
+      const text = el.querySelector<HTMLElement>(`.${s.text}`)
+      if (!reduced && text) {
+        gsap.fromTo(
+          text.children,
+          { autoAlpha: 0, y: 48 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            ease: 'power2.out',
+            stagger: 0.15,
+            scrollTrigger: { trigger: text, start: 'top 95%', end: 'top 50%', scrub: 0.8 },
+          },
+        )
+      }
+
       control.current = (p: boolean) => {
         pausedRef.current = p
         if (p) v.pause()

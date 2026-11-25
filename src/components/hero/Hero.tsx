@@ -77,29 +77,49 @@ export function Hero() {
 
       // Scrolling out: the hero holds still, then shrinks, tilts and flies up like a postcard,
       // uncovering the welcome page underneath (it scrolls up beneath the pinned hero).
-      gsap
-        .timeline({
-          scrollTrigger: {
-            trigger: root.current,
-            start: 'top top',
-            end: '+=100%',
-            scrub: true,
-            pin: true,
-            pinSpacing: false,
-            onUpdate: (self) => setHeroGone(self.progress > 0.55),
-            // The sound toggle stays fixed bottom-left while the hero is on screen, and goes with it.
-            onLeave: () => {
-              video.current?.pause()
-              gsap.to(soundBtn.current, { autoAlpha: 0, duration: 0.3 })
+      // On wide screens the welcome title is huge, so it shows below the card all the way out. On phones
+      // it is small and sits higher, and with the slow-then-fast flight it rose up behind the tall card
+      // and stayed hidden: there the card lifts at a steady pace (shorter hold), so its bottom edge keeps
+      // just ahead of the rising title and the title is readable the whole way, as on the web.
+      const mm = gsap.matchMedia()
+      mm.add({ phone: '(max-width: 700px)', wide: '(min-width: 701px)' }, (ctx) => {
+        const phone = !!ctx.conditions?.phone
+        gsap
+          .timeline({
+            scrollTrigger: {
+              trigger: root.current,
+              start: 'top top',
+              end: '+=100%',
+              scrub: true,
+              pin: true,
+              pinSpacing: false,
+              onUpdate: (self) => setHeroGone(self.progress > 0.55),
+              // The sound toggle stays fixed bottom-left while the hero is on screen, and goes with it.
+              onLeave: () => {
+                video.current?.pause()
+                gsap.to(soundBtn.current, { autoAlpha: 0, duration: 0.3 })
+              },
+              onEnterBack: () => {
+                video.current?.play().catch(() => undefined)
+                gsap.to(soundBtn.current, { autoAlpha: 1, duration: 0.3 })
+              },
             },
-            onEnterBack: () => {
-              video.current?.play().catch(() => undefined)
-              gsap.to(soundBtn.current, { autoAlpha: 1, duration: 0.3 })
-            },
-          },
-        })
-        .to(card, { '--frame': '10px', scale: 0.92, rotate: -2, duration: 0.3, ease: 'power1.in' })
-        .to(card, { scale: 0.62, rotate: -7, yPercent: -118, duration: 0.7, ease: 'power2.in' })
+          })
+          .to(card, {
+            '--frame': '10px',
+            scale: 0.92,
+            rotate: -2,
+            duration: phone ? 0.15 : 0.3,
+            ease: 'power1.in',
+          })
+          .to(card, {
+            scale: 0.62,
+            rotate: -7,
+            yPercent: -118,
+            duration: phone ? 0.85 : 0.7,
+            ease: phone ? 'none' : 'power2.in',
+          })
+      })
 
       const enter = () => {
         startWithSound()
