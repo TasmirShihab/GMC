@@ -23,9 +23,6 @@ const band = (from: number, to: number) => `inset(${from}% 0% ${100 - to}% 0%)`
  * Hovering shows "Project 108" above it. The drawing is a mask, so its colour (and the disc's) come from
  * CSS variables.
  */
-/** Matches the CSS rule that hides the orb. */
-const PHONE = '(max-width: 700px)'
-
 export function ExplorePill() {
   const root = useRef<HTMLAnchorElement>(null)
 
@@ -35,8 +32,7 @@ export function ExplorePill() {
       if (!el) return
       const q = gsap.utils.selector(el)
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      // Hidden on phones for now (see the CSS): don't run its endless build loop there either.
-      if (reduced || window.matchMedia(PHONE).matches) return
+      if (reduced) return
 
       // Each part opens upward from its own bottom edge, one after the other; the finished stupa rests,
       // then softly fades and the cycle starts again. It runs on its own, hover or not.

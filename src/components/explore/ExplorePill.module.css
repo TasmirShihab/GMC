@@ -173,11 +173,3 @@
     animation: none;
   }
 }
-
-/* Phones: hidden for now. Its endless drift, glow and build animations kept repainting during the
-   scroll; the JS loop is skipped there too (ExplorePill.tsx). */
-@media (max-width: 700px) {
-  .orb {
-    display: none;
-  }
-}
